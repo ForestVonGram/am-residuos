@@ -1,0 +1,161 @@
+:host {
+  display: block;
+}
+
+.site-header {
+  position: relative;
+  z-index: 10;
+  height: var(--header-height);
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.header-content {
+  display: flex;
+  width: min(100%, 75rem);
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 clamp(2rem, 6vw, 4.75rem);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 0.5rem;
+}
+
+.brand:focus-visible,
+.main-navigation a:focus-visible,
+.menu-toggle:focus-visible {
+  outline: 0.2rem solid var(--color-accent-soft);
+  outline-offset: 0.3rem;
+}
+
+.brand-logo {
+  display: block;
+  width: 8.4rem;
+  height: auto;
+}
+
+.brand-name {
+  font-family: var(--font-title);
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+}
+
+.main-navigation {
+  display: flex;
+  align-items: center;
+  gap: clamp(2rem, 4.5vw, 4.75rem);
+}
+
+.main-navigation a {
+  position: relative;
+  padding: 0.65rem 0.15rem;
+  border-radius: 0.2rem;
+  color: inherit;
+  font-size: 1.16rem;
+  font-weight: 750;
+  letter-spacing: 0.005em;
+  text-decoration: none;
+}
+
+.main-navigation a::after {
+  position: absolute;
+  right: 0.15rem;
+  bottom: 0.25rem;
+  left: 0.15rem;
+  height: 0.16rem;
+  border-radius: 999px;
+  background: var(--color-accent-soft);
+  content: '';
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 180ms ease;
+}
+
+.main-navigation a:hover::after,
+.main-navigation a:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.menu-toggle {
+  display: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.55rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.menu-toggle span {
+  display: block;
+  width: 100%;
+  height: 0.15rem;
+  margin: 0.3rem 0;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+@media (max-width: 48rem) {
+  .header-content {
+    padding: 0 1.25rem;
+  }
+
+  .brand {
+    gap: 0.55rem;
+  }
+
+  .brand-logo {
+    width: 5.25rem;
+  }
+
+  .brand-name {
+    font-size: 1.12rem;
+    line-height: 1.18;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .main-navigation {
+    position: absolute;
+    top: calc(100% - 0.15rem);
+    right: 1rem;
+    left: 1rem;
+    display: grid;
+    gap: 0;
+    padding: 0.65rem;
+    border: 1px solid rgb(194 194 255 / 32%);
+    border-radius: 0 0 0.9rem 0.9rem;
+    background: var(--color-primary);
+    box-shadow: 0 1.1rem 2.5rem rgb(2 3 54 / 28%);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-0.5rem);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  .main-navigation--open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .main-navigation a {
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+  }
+}

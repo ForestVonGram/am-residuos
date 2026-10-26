@@ -1,0 +1,41 @@
+<main class="help-page">
+  <section class="help-heading" aria-labelledby="help-title">
+    <div class="help-container">
+      <h1 id="help-title">Bienvenido al módulo de ayuda</h1>
+      <p class="help-heading__description">
+        Encuentra respuestas rápidas sobre rutas, horarios y seguimiento del
+        servicio de recolección.
+      </p>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="help-container help-container--narrow">
+      <h2 id="faq-title">Preguntas frecuentes</h2>
+
+      <div class="faq-list">
+        @for (item of questions; track item.question; let index = $index) {
+          <details class="faq-item" [attr.open]="index === 0 ? '' : null">
+            <summary>
+              <span>{{ item.question }}</span>
+              <span class="faq-item__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="faq-item__answer">
+              <p>{{ item.answer }}</p>
+            </div>
+          </details>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="help-contact" aria-labelledby="help-contact-title">
+    <div class="help-container help-contact__content">
+      <div>
+        <h2 id="help-contact-title">¿Necesitas más ayuda?</h2>
+        <p>Nuestro canal de contacto está disponible para orientarte.</p>
+      </div>
+      <a class="contact-button" routerLink="/contacto">Contáctanos</a>
+    </div>
+  </section>
+</main>

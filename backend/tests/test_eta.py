@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from app.models.route import CollectionRoute, RouteSchedule
-from app.repositories.citizen import LocatedRoute
+from app.repositories.citizen import LocatedRoute, PublicOperation
 from app.services.citizen import CitizenService
 from app.services.eta import expected_arrival
 
@@ -50,6 +50,9 @@ class FakeETARepository:
         if service_date.weekday() == self.schedule.weekday:
             return [(self.schedule, self.route)]
         return []
+
+    async def get_public_operation(self, route_id, schedule_id, service_date):
+        return PublicOperation(assignment=None, adjustment=None)
 
 
 @pytest.mark.asyncio

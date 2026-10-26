@@ -4,7 +4,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db_session
+from app.repositories.admin import AdminRepository
 from app.repositories.citizen import CitizenRepository
+from app.services.admin import AdminService
 from app.services.citizen import CitizenService
 
 DatabaseSession = Annotated[AsyncSession, Depends(get_db_session)]
@@ -15,3 +17,10 @@ def get_citizen_service(session: DatabaseSession) -> CitizenService:
 
 
 CitizenServiceDependency = Annotated[CitizenService, Depends(get_citizen_service)]
+
+
+def get_admin_service(session: DatabaseSession) -> AdminService:
+    return AdminService(AdminRepository(session))
+
+
+AdminServiceDependency = Annotated[AdminService, Depends(get_admin_service)]

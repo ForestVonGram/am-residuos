@@ -1,12 +1,15 @@
 import uuid
 from datetime import date, time
+from typing import TYPE_CHECKING, Any
 
-from geoalchemy2 import Geometry
 from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Integer, String, Text, Time
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.operational import RouteAssignment, ServiceAdjustment
 
 
 class CollectionRoute(TimestampMixin, Base):
@@ -17,12 +20,13 @@ class CollectionRoute(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(160))
     description: Mapped[str | None] = mapped_column(Text)
     sector: Mapped[str] = mapped_column(String(160), index=True)
-    geometry: Mapped[object] = mapped_column(
-        Geometry(geometry_type="LINESTRING", srid=4326, spatial_index=True)
-    )
+    geometry: Mapped[dict[str, Any]] = mapped_column(JSONB)
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", index=True)
 
     schedules: Mapped[list["RouteSchedule"]] = relationship(
+        back_populates="route", cascade="all, delete-orphan"
+    )
+    assignments: Mapped[list["RouteAssignment"]] = relationship(
         back_populates="route", cascade="all, delete-orphan"
     )
 
@@ -46,3 +50,6 @@ class RouteSchedule(TimestampMixin, Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", index=True)
 
     route: Mapped[CollectionRoute] = relationship(back_populates="schedules")
+    adjustments: Mapped[list["ServiceAdjustment"]] = relationship(
+        back_populates="schedule", cascade="all, delete-orphan"
+    )

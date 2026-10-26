@@ -1,0 +1,698 @@
+<main class="admin-page">
+  <section class="admin-shell" aria-labelledby="admin-title">
+    <header class="admin-header">
+      <button
+        class="admin-brand"
+        type="button"
+        aria-label="Volver al inicio del panel"
+        (click)="openSection('overview')"
+      >
+        <img src="/images/logos/logo_axm_residuos.png" alt="" width="211" height="114" />
+        <span>Residuos<br />AXM</span>
+      </button>
+      <div class="admin-header__title">
+        <strong>Panel administrativo</strong>
+        <span>{{ auth.user()?.email }}</span>
+      </div>
+      <button class="logout-button" type="button" (click)="logout()">Cerrar sesión</button>
+    </header>
+
+    <div class="admin-content">
+      @if (activeSection() === 'overview') {
+        <div class="welcome">
+          <p>Acceso operativo</p>
+          <h1 id="admin-title">Hola, {{ auth.user()?.name }}.<br />¿Qué quieres hacer hoy?</h1>
+        </div>
+
+        @if (connectionError()) {
+          <aside class="connection-alert" role="status">
+            <div>
+              <strong>El backend administrativo no está disponible</strong>
+              <span
+                >Puedes recorrer el panel, pero los registros aparecerán cuando la API esté
+                activa.</span
+              >
+            </div>
+            <button type="button" (click)="loadData()">Reintentar</button>
+          </aside>
+        }
+
+        <div class="management-grid" aria-label="Módulos de administración">
+          <button type="button" (click)="openSection('personnel')">
+            <span class="management-icon">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="25" cy="18" r="10" />
+                <path d="M8 51v-8c0-8 7-14 16-14s16 6 16 14v3" />
+                <path d="m38 48 14-14 6 6-14 14-9 3Z" />
+              </svg>
+            </span>
+            <strong>Gestionar empleados</strong>
+            <small>{{ data().personnel.length }} registros</small>
+          </button>
+
+          <button type="button" (click)="openSection('trucks')">
+            <span class="management-icon">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M6 17h34v29H6Z" />
+                <path d="M40 28h10l8 9v9H40Z" />
+                <circle cx="18" cy="48" r="6" />
+                <circle cx="49" cy="48" r="6" />
+                <path d="M17 23h14l-9 14h11" />
+              </svg>
+            </span>
+            <strong>Gestionar camiones</strong>
+            <small>{{ data().trucks.length }} registros</small>
+          </button>
+
+          <button type="button" (click)="openSection('schedules')">
+            <span class="management-icon">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <rect x="8" y="13" width="48" height="43" rx="5" />
+                <path d="M18 7v12M46 7v12M8 25h48" />
+                <path d="M22 35h8v8h-8ZM36 35h8v8h-8Z" />
+              </svg>
+            </span>
+            <strong>Gestionar horarios</strong>
+            <small>{{ data().schedules.length }} registros</small>
+          </button>
+
+          <button type="button" (click)="openSection('assignments')">
+            <span class="management-icon">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="22" cy="21" r="9" />
+                <circle cx="45" cy="24" r="7" />
+                <path d="M7 53c0-11 7-18 15-18s15 7 15 18" />
+                <path d="M37 39c3-4 11-4 15 0 3 3 5 8 5 14" />
+              </svg>
+            </span>
+            <strong>Gestionar asignaciones</strong>
+            <small>{{ data().assignments.length }} registros</small>
+          </button>
+
+          <button type="button" (click)="openSection('adjustments')">
+            <span class="management-icon">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M32 7 59 55H5Z" />
+                <path d="M32 23v16M32 47v1" />
+              </svg>
+            </span>
+            <strong>Gestionar novedades</strong>
+            <small>{{ data().adjustments.length }} registros</small>
+          </button>
+        </div>
+      } @else {
+        <div class="section-toolbar">
+          <button type="button" (click)="openSection('overview')">
+            <span aria-hidden="true">←</span> Volver
+          </button>
+          <div class="section-toolbar__title">
+            <p>Operación administrativa</p>
+            <h1 id="admin-title">{{ sectionTitle() }}</h1>
+          </div>
+          <div class="section-toolbar__actions">
+            <button class="create-button" type="button" (click)="beginCreate()">+ Nuevo</button>
+            <button class="refresh-button" type="button" (click)="loadData()">Actualizar</button>
+          </div>
+        </div>
+
+        @if (connectionError()) {
+          <aside class="connection-alert connection-alert--section" role="status">
+            <div>
+              <strong>No fue posible consultar la API</strong
+              ><span>Inicia el backend en el puerto 8000 y vuelve a intentarlo.</span>
+            </div>
+            <button type="button" (click)="loadData()">Reintentar</button>
+          </aside>
+        }
+
+        @if (successMessage()) {
+          <p class="feedback feedback--success" role="status">{{ successMessage() }}</p>
+        }
+
+        @if (formOpen()) {
+          <section class="record-form-card" aria-labelledby="record-form-title">
+            <div class="record-form-card__header">
+              <div>
+                <p>{{ editingId() ? 'Editar registro' : 'Crear registro' }}</p>
+                <h2 id="record-form-title">{{ sectionTitle() }}</h2>
+              </div>
+              <button
+                type="button"
+                class="close-form"
+                (click)="closeForm()"
+                aria-label="Cerrar formulario"
+              >
+                ×
+              </button>
+            </div>
+
+            @switch (activeSection()) {
+              @case ('personnel') {
+                <form class="record-form" #personnelFormRef="ngForm" (ngSubmit)="savePersonnel()">
+                  <label
+                    >Nombre<input
+                      name="firstName"
+                      [(ngModel)]="personnelForm.first_name"
+                      required
+                      maxlength="100"
+                  /></label>
+                  <label
+                    >Apellido<input
+                      name="lastName"
+                      [(ngModel)]="personnelForm.last_name"
+                      required
+                      maxlength="100"
+                  /></label>
+                  <label
+                    >Código de empleado<input
+                      name="employeeCode"
+                      [(ngModel)]="personnelForm.employee_code"
+                      maxlength="40"
+                      placeholder="Ej. EMP-001"
+                  /></label>
+                  <label
+                    >Rol<select name="role" [(ngModel)]="personnelForm.role" required>
+                      <option value="driver">Conductor</option>
+                      <option value="collector">Recolector</option>
+                      <option value="supervisor">Supervisor</option>
+                    </select></label
+                  >
+                  <div class="form-actions">
+                    <button type="button" class="secondary-button" (click)="closeForm()">
+                      Cancelar</button
+                    ><button type="submit" [disabled]="personnelFormRef.invalid || saving()">
+                      {{ saving() ? 'Guardando…' : 'Guardar empleado' }}
+                    </button>
+                  </div>
+                </form>
+              }
+              @case ('trucks') {
+                <form class="record-form" #truckFormRef="ngForm" (ngSubmit)="saveTruck()">
+                  <label
+                    >Placa<input
+                      name="plate"
+                      [(ngModel)]="truckForm.plate"
+                      required
+                      minlength="5"
+                      maxlength="10"
+                      pattern="[A-Za-z0-9-]+"
+                      placeholder="ABC123"
+                  /></label>
+                  <label
+                    >Nombre del vehículo<input
+                      name="truckName"
+                      [(ngModel)]="truckForm.name"
+                      required
+                      maxlength="100"
+                      placeholder="Ej. Compactador 01"
+                  /></label>
+                  <label
+                    >Marca<input name="brand" [(ngModel)]="truckForm.brand" maxlength="80"
+                  /></label>
+                  <label
+                    >Modelo<input name="model" [(ngModel)]="truckForm.model" maxlength="80"
+                  /></label>
+                  <label
+                    >Capacidad (toneladas)<input
+                      name="capacity"
+                      type="number"
+                      [(ngModel)]="truckForm.capacity_tons"
+                      min="1"
+                      step="1"
+                  /></label>
+                  <label
+                    >Estado<select name="truckStatus" [(ngModel)]="truckForm.status" required>
+                      <option value="available">Disponible</option>
+                      <option value="maintenance">Mantenimiento</option>
+                      <option value="out_of_service">Fuera de servicio</option>
+                    </select></label
+                  >
+                  <div class="form-actions">
+                    <button type="button" class="secondary-button" (click)="closeForm()">
+                      Cancelar</button
+                    ><button type="submit" [disabled]="truckFormRef.invalid || saving()">
+                      {{ saving() ? 'Guardando…' : 'Guardar camión' }}
+                    </button>
+                  </div>
+                </form>
+              }
+              @case ('schedules') {
+                <form class="record-form" #scheduleFormRef="ngForm" (ngSubmit)="saveSchedule()">
+                  <label class="field-wide"
+                    >Ruta<select
+                      name="scheduleRoute"
+                      [(ngModel)]="scheduleForm.route_id"
+                      [disabled]="!!editingId()"
+                      required
+                    >
+                      <option value="" disabled>Selecciona una ruta</option>
+                      @for (route of data().routes; track route.id) {
+                        <option [value]="route.id">{{ route.name }} · {{ route.code }}</option>
+                      }
+                    </select></label
+                  >
+                  <label
+                    >Día<select name="weekday" [(ngModel)]="scheduleForm.weekday" required>
+                      <option [ngValue]="0">Lunes</option>
+                      <option [ngValue]="1">Martes</option>
+                      <option [ngValue]="2">Miércoles</option>
+                      <option [ngValue]="3">Jueves</option>
+                      <option [ngValue]="4">Viernes</option>
+                      <option [ngValue]="5">Sábado</option>
+                      <option [ngValue]="6">Domingo</option>
+                    </select></label
+                  >
+                  <label
+                    >Hora de salida<input
+                      name="startTime"
+                      type="time"
+                      [(ngModel)]="scheduleForm.start_time"
+                      required
+                  /></label>
+                  <label
+                    >Duración estimada (min)<input
+                      name="duration"
+                      type="number"
+                      [(ngModel)]="scheduleForm.duration_minutes"
+                      min="1"
+                      max="1440"
+                      required
+                  /></label>
+                  <label
+                    >Vigente desde<input
+                      name="scheduleFrom"
+                      type="date"
+                      [(ngModel)]="scheduleForm.effective_from"
+                      required
+                  /></label>
+                  <label
+                    >Vigente hasta <span class="optional">Opcional</span
+                    ><input
+                      name="scheduleTo"
+                      type="date"
+                      [(ngModel)]="scheduleForm.effective_to"
+                      [min]="scheduleForm.effective_from"
+                  /></label>
+                  <div class="form-actions">
+                    <button type="button" class="secondary-button" (click)="closeForm()">
+                      Cancelar</button
+                    ><button type="submit" [disabled]="scheduleFormRef.invalid || saving()">
+                      {{ saving() ? 'Guardando…' : 'Guardar horario' }}
+                    </button>
+                  </div>
+                </form>
+              }
+              @case ('assignments') {
+                <form class="record-form" #assignmentFormRef="ngForm" (ngSubmit)="saveAssignment()">
+                  <label
+                    >Ruta<select
+                      name="assignmentRoute"
+                      [(ngModel)]="assignmentForm.route_id"
+                      [disabled]="!!editingId()"
+                      required
+                    >
+                      <option value="" disabled>Selecciona una ruta</option>
+                      @for (route of data().routes; track route.id) {
+                        <option [value]="route.id">{{ route.name }}</option>
+                      }
+                    </select></label
+                  >
+                  <label
+                    >Camión<select
+                      name="assignmentTruck"
+                      [(ngModel)]="assignmentForm.truck_id"
+                      required
+                    >
+                      <option value="" disabled>Selecciona un camión</option>
+                      @for (truck of data().trucks; track truck.id) {
+                        <option
+                          [value]="truck.id"
+                          [disabled]="
+                            truck.status !== 'available' && truck.id !== assignmentForm.truck_id
+                          "
+                        >
+                          {{ truck.name }} · {{ truck.plate }} —
+                          {{ truckStatusLabel(truck.status) }}
+                        </option>
+                      }
+                    </select></label
+                  >
+                  <fieldset class="field-wide personnel-picker">
+                    <legend>Cuadrilla</legend>
+                    <p>Selecciona al menos una persona e incluye un conductor.</p>
+                    <div>
+                      @for (person of data().personnel; track person.id) {
+                        <label class="check-option"
+                          ><input
+                            type="checkbox"
+                            [name]="'person-' + person.id"
+                            [ngModel]="isPersonnelSelected(person.id)"
+                            (ngModelChange)="togglePersonnel(person.id, $event)"
+                          />
+                          <span
+                            ><strong>{{ person.first_name }} {{ person.last_name }}</strong
+                            ><small>{{ roleLabel(person.role) }}</small></span
+                          ></label
+                        >
+                      } @empty {
+                        <span class="empty-inline"
+                          >Primero crea empleados para conformar una cuadrilla.</span
+                        >
+                      }
+                    </div>
+                  </fieldset>
+                  <label
+                    >Vigente desde<input
+                      name="assignmentFrom"
+                      type="date"
+                      [(ngModel)]="assignmentForm.effective_from"
+                      required
+                  /></label>
+                  <label
+                    >Vigente hasta <span class="optional">Opcional</span
+                    ><input
+                      name="assignmentTo"
+                      type="date"
+                      [(ngModel)]="assignmentForm.effective_to"
+                      [min]="assignmentForm.effective_from"
+                  /></label>
+                  <div class="form-actions">
+                    <button type="button" class="secondary-button" (click)="closeForm()">
+                      Cancelar</button
+                    ><button
+                      type="submit"
+                      [disabled]="
+                        assignmentFormRef.invalid ||
+                        assignmentForm.personnel_ids.length === 0 ||
+                        saving()
+                      "
+                    >
+                      {{ saving() ? 'Guardando…' : 'Guardar asignación' }}
+                    </button>
+                  </div>
+                </form>
+              }
+              @case ('adjustments') {
+                <form class="record-form" #adjustmentFormRef="ngForm" (ngSubmit)="saveAdjustment()">
+                  <label class="field-wide"
+                    >Horario<select
+                      name="adjustmentSchedule"
+                      [(ngModel)]="adjustmentForm.schedule_id"
+                      [disabled]="!!editingId()"
+                      required
+                    >
+                      <option value="" disabled>Selecciona un horario</option>
+                      @for (schedule of data().schedules; track schedule.id) {
+                        <option [value]="schedule.id">{{ scheduleName(schedule.id) }}</option>
+                      }
+                    </select></label
+                  >
+                  <label
+                    >Fecha del servicio<input
+                      name="serviceDate"
+                      type="date"
+                      [(ngModel)]="adjustmentForm.service_date"
+                      [disabled]="!!editingId()"
+                      required
+                  /></label>
+                  <label
+                    >Minutos de retraso<input
+                      name="delay"
+                      type="number"
+                      [(ngModel)]="adjustmentForm.delay_minutes"
+                      min="0"
+                      max="1440"
+                      [disabled]="adjustmentForm.cancelled"
+                      required
+                  /></label>
+                  <label class="check-field field-wide"
+                    ><input
+                      name="cancelled"
+                      type="checkbox"
+                      [(ngModel)]="adjustmentForm.cancelled"
+                    /><span
+                      ><strong>Servicio cancelado</strong
+                      ><small>La ruta no operará en esta fecha.</small></span
+                    ></label
+                  >
+                  <label class="field-wide"
+                    >Motivo o información para el ciudadano<textarea
+                      name="reason"
+                      [(ngModel)]="adjustmentForm.reason"
+                      maxlength="500"
+                      rows="3"
+                      placeholder="Describe el retraso, la cancelación o la novedad"
+                    ></textarea>
+                  </label>
+                  <div class="form-actions">
+                    <button type="button" class="secondary-button" (click)="closeForm()">
+                      Cancelar</button
+                    ><button type="submit" [disabled]="adjustmentFormRef.invalid || saving()">
+                      {{ saving() ? 'Guardando…' : 'Guardar novedad' }}
+                    </button>
+                  </div>
+                </form>
+              }
+            }
+
+            @if (formError()) {
+              <p class="feedback feedback--error" role="alert">{{ formError() }}</p>
+            }
+          </section>
+        }
+
+        <div class="records-panel" [attr.aria-busy]="loading()">
+          @if (loading()) {
+            <div class="loading-state">Cargando información…</div>
+          }
+          @switch (activeSection()) {
+            @case ('personnel') {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Empleado</th>
+                    <th>Código</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th class="actions-column">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (person of data().personnel; track person.id) {
+                    <tr>
+                      <td>{{ person.first_name }} {{ person.last_name }}</td>
+                      <td>{{ person.employee_code ?? '—' }}</td>
+                      <td>{{ roleLabel(person.role) }}</td>
+                      <td><span class="record-status">Activo</span></td>
+                      <td>
+                        <div class="row-actions">
+                          <button type="button" (click)="editPersonnel(person)">Editar</button
+                          ><button
+                            type="button"
+                            class="danger-action"
+                            (click)="deactivatePersonnel(person)"
+                          >
+                            Desactivar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="empty-records" colspan="5">
+                        No hay empleados. Usa “Nuevo” para crear el primero.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @case ('trucks') {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Vehículo</th>
+                    <th>Placa</th>
+                    <th>Capacidad</th>
+                    <th>Estado</th>
+                    <th class="actions-column">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (truck of data().trucks; track truck.id) {
+                    <tr>
+                      <td>
+                        {{ truck.name
+                        }}<small>{{ truck.brand ?? '' }} {{ truck.model ?? '' }}</small>
+                      </td>
+                      <td>{{ truck.plate }}</td>
+                      <td>{{ truck.capacity_tons ? truck.capacity_tons + ' t' : '—' }}</td>
+                      <td>
+                        <span
+                          class="record-status"
+                          [class.record-status--warning]="truck.status !== 'available'"
+                          >{{ truckStatusLabel(truck.status) }}</span
+                        >
+                      </td>
+                      <td>
+                        <div class="row-actions">
+                          <button type="button" (click)="editTruck(truck)">Editar</button
+                          ><button
+                            type="button"
+                            class="danger-action"
+                            (click)="deactivateTruck(truck)"
+                          >
+                            Desactivar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="empty-records" colspan="5">
+                        No hay camiones. Usa “Nuevo” para crear el primero.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @case ('schedules') {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ruta</th>
+                    <th>Día</th>
+                    <th>Hora</th>
+                    <th>Duración</th>
+                    <th class="actions-column">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (schedule of data().schedules; track schedule.id) {
+                    <tr>
+                      <td>{{ routeName(schedule.route_id) }}</td>
+                      <td>{{ weekdayLabel(schedule.weekday) }}</td>
+                      <td>{{ schedule.start_time.slice(0, 5) }}</td>
+                      <td>{{ schedule.duration_minutes }} min</td>
+                      <td>
+                        <div class="row-actions">
+                          <button type="button" (click)="editSchedule(schedule)">Editar</button
+                          ><button
+                            type="button"
+                            class="danger-action"
+                            (click)="deactivateSchedule(schedule)"
+                          >
+                            Desactivar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="empty-records" colspan="5">
+                        No hay horarios. Usa “Nuevo” para programar una ruta.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @case ('assignments') {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Ruta</th>
+                    <th>Camión</th>
+                    <th>Cuadrilla</th>
+                    <th>Vigencia</th>
+                    <th class="actions-column">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (assignment of data().assignments; track assignment.id) {
+                    <tr>
+                      <td>{{ routeName(assignment.route_id) }}</td>
+                      <td>{{ assignment.truck.name }} · {{ assignment.truck.plate }}</td>
+                      <td>
+                        {{ assignment.personnel.length }} personas<small>
+                          @for (person of assignment.personnel; track person.id; let last = $last) {
+                            {{ person.first_name }} {{ person.last_name }}{{ last ? '' : ', ' }}
+                          }
+                        </small>
+                      </td>
+                      <td>Desde {{ formatDate(assignment.effective_from) }}</td>
+                      <td>
+                        <div class="row-actions">
+                          <button type="button" (click)="editAssignment(assignment)">Editar</button
+                          ><button
+                            type="button"
+                            class="danger-action"
+                            (click)="deactivateAssignment(assignment)"
+                          >
+                            Desactivar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="empty-records" colspan="5">
+                        No hay asignaciones. Crea empleados y camiones antes de asignarlos.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @case ('adjustments') {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    <th>Novedad</th>
+                    <th>Motivo</th>
+                    <th class="actions-column">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (adjustment of data().adjustments; track adjustment.id) {
+                    <tr>
+                      <td>{{ formatDate(adjustment.service_date) }}</td>
+                      <td>{{ scheduleName(adjustment.schedule_id) }}</td>
+                      <td>
+                        {{
+                          adjustment.cancelled
+                            ? 'Cancelado'
+                            : adjustment.delay_minutes + ' min de retraso'
+                        }}
+                      </td>
+                      <td>{{ adjustment.reason ?? 'Sin observación' }}</td>
+                      <td>
+                        <div class="row-actions">
+                          <button type="button" (click)="editAdjustment(adjustment)">Editar</button
+                          ><button
+                            type="button"
+                            class="danger-action"
+                            (click)="deleteAdjustment(adjustment)"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="empty-records" colspan="5">No hay novedades registradas.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          }
+        </div>
+      }
+    </div>
+  </section>
+</main>

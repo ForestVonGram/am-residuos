@@ -1,0 +1,135 @@
+<main class="routes-page">
+  <section class="routes-layout" aria-labelledby="routes-title">
+    <div class="routes-panel">
+      <div class="routes-panel__heading">
+        <p class="routes-panel__eyebrow">Servicio de recolección</p>
+        <h1 id="routes-title">Rutas de una Armenia limpia</h1>
+        <p>
+          Consulta el recorrido, el sector y el horario programado del vehículo
+          recolector.
+        </p>
+      </div>
+
+      <div class="data-status" [class.data-status--local]="usingLocalData()">
+        <span aria-hidden="true"></span>
+        {{
+          usingLocalData()
+            ? 'Mostrando trazados locales'
+            : 'Información actualizada desde el sistema'
+        }}
+      </div>
+
+      <div class="route-selector" aria-label="Rutas disponibles">
+        @for (route of routes(); track route.id) {
+          <button
+            type="button"
+            [class.route-button--active]="route.id === selectedRouteId()"
+            [attr.aria-pressed]="route.id === selectedRouteId()"
+            (click)="selectRoute(route.id)"
+          >
+            <span>{{ route.name }}</span>
+            <small>{{ route.sector }}</small>
+          </button>
+        }
+      </div>
+
+      @if (selectedRoute(); as route) {
+        <article class="route-information" aria-live="polite">
+          <div class="route-information__header">
+            <span>{{ route.code }}</span>
+            <h2>{{ route.name }}</h2>
+          </div>
+
+          @if (route.description) {
+            <p class="route-information__description">{{ route.description }}</p>
+          }
+
+          @if (route.schedule; as schedule) {
+            <dl>
+              <div>
+                <dt>Próxima jornada</dt>
+                <dd>{{ formatDate(schedule.service_date) }}</dd>
+              </div>
+              <div>
+                <dt>Horario estimado</dt>
+                <dd>
+                  {{ formatTime(schedule.estimated_start_time) }} -
+                  {{ formatTime(schedule.expected_end_time) }}
+                </dd>
+              </div>
+            </dl>
+
+            <section class="route-operation" aria-labelledby="operation-title">
+              <h3 id="operation-title">Operación asignada</h3>
+
+              @if (schedule.truck; as truck) {
+                <div class="assigned-truck">
+                  <span class="assigned-truck__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M3 6h11v11H3Z" />
+                      <path d="M14 10h4l3 3v4h-7Z" />
+                      <circle cx="7" cy="18" r="2" />
+                      <circle cx="18" cy="18" r="2" />
+                    </svg>
+                  </span>
+                  <div>
+                    <small>Camión recolector</small>
+                    <strong>{{ truck.name }}</strong>
+                    <span>Placa {{ truck.plate }}</span>
+                  </div>
+                </div>
+              } @else {
+                <p class="operation-empty">Esta jornada aún no tiene un camión asignado.</p>
+              }
+
+              <div class="assigned-crew">
+                <h4>Operarios</h4>
+                @if (schedule.personnel.length) {
+                  <ul>
+                    @for (person of schedule.personnel; track $index) {
+                      <li>
+                        <span aria-hidden="true">{{ person.name.charAt(0) }}</span>
+                        <div>
+                          <strong>{{ person.name }}</strong>
+                          <small>{{ roleLabel(person.role) }}</small>
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="operation-empty">No hay operarios asignados a esta jornada.</p>
+                }
+              </div>
+            </section>
+          } @else {
+            <p class="route-information__empty">
+              El trazado está disponible. El horario se mostrará cuando exista
+              una jornada programada en el sistema.
+            </p>
+          }
+        </article>
+      }
+    </div>
+
+    <div class="map-panel">
+      <div
+        #mapContainer
+        class="map"
+        role="region"
+        aria-label="Mapa interactivo de rutas de recolección en Armenia"
+      ></div>
+
+      @if (!mapReady()) {
+        <div class="map-loading" aria-live="polite">
+          <span></span>
+          Cargando mapa…
+        </div>
+      }
+
+      <div class="map-legend" aria-label="Leyenda del mapa">
+        <span><i class="map-legend__line map-legend__line--active"></i>Ruta seleccionada</span>
+        <span><i class="map-legend__line"></i>Otra ruta</span>
+      </div>
+    </div>
+  </section>
+</main>

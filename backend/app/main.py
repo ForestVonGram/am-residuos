@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.database.session import engine
+from app.services.admin import AdminError
 
 settings = get_settings()
 
@@ -36,6 +38,11 @@ if settings.allowed_origins:
     )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+
+@app.exception_handler(AdminError)
+async def admin_error_handler(_: Request, error: AdminError) -> JSONResponse:
+    return JSONResponse(status_code=error.status_code, content={"detail": str(error)})
 
 
 @app.get("/health", tags=["health"])

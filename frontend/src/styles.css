@@ -1,3 +1,84 @@
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
-@import 'tailwindcss';
+@font-face {
+  font-family: 'Archivo Black';
+  src: url('/fonts/ArchivoBlack-Regular.ttf') format('truetype');
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  src: url('/fonts/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');
+  font-display: swap;
+  font-style: normal;
+  font-weight: 300 800;
+}
+
+:root {
+  --color-primary: #020363;
+  --color-accent: #6566f6;
+  --color-accent-soft: #c2c2ff;
+  --color-white: #ffffff;
+  --font-title: 'Archivo Black', sans-serif;
+  --font-body: 'Open Sans', sans-serif;
+  --header-height: 10rem;
+  color-scheme: light;
+  font-family: var(--font-body);
+  font-synthesis: none;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 20rem;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 20rem;
+  min-height: 100dvh;
+  background: var(--color-white);
+  color: var(--color-primary);
+  font-family: var(--font-body);
+}
+
+button,
+a {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+a {
+  color: inherit;
+}
+
+@media (max-width: 48rem) {
+  :root {
+    --header-height: 5.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

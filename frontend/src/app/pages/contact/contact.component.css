@@ -1,0 +1,208 @@
+:host {
+  display: block;
+}
+
+.contact-page {
+  min-height: 100dvh;
+  background: var(--color-white);
+  color: #151522;
+}
+
+.contact-container {
+  width: min(100% - 3rem, 70rem);
+  margin-inline: auto;
+}
+
+.contact-heading {
+  padding: clamp(4rem, 8vw, 7rem) 0 clamp(3.5rem, 6vw, 5rem);
+  background: linear-gradient(180deg, #f7f7ff 0%, var(--color-white) 100%);
+  text-align: center;
+}
+
+.contact-heading__eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--color-accent);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contact-heading h1 {
+  margin: 0;
+  color: #090916;
+  font-family: var(--font-title);
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  font-weight: 400;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.contact-heading__description {
+  max-width: 43rem;
+  margin: 1.25rem auto 0;
+  color: #4d4d5d;
+  font-size: clamp(1rem, 1.8vw, 1.15rem);
+  line-height: 1.65;
+  text-wrap: balance;
+}
+
+.contact-channels {
+  padding: 0 0 clamp(5rem, 9vw, 8rem);
+}
+
+.contact-channels h2 {
+  margin: 0 0 2.25rem;
+  color: #11111e;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  font-weight: 600;
+  text-align: center;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.contact-card {
+  display: flex;
+  min-height: 27rem;
+  padding: clamp(1.75rem, 4vw, 2.5rem);
+  flex-direction: column;
+  border: 1px solid rgb(101 102 246 / 14%);
+  border-radius: 1.25rem;
+  background: #fbfbff;
+  box-shadow: 0 1.25rem 3rem rgb(2 3 99 / 7%);
+}
+
+.contact-card__icon {
+  display: grid;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin-bottom: 1.75rem;
+  place-items: center;
+  border-radius: 1rem;
+  background: var(--color-accent-soft);
+  color: var(--color-primary);
+}
+
+.contact-card__icon svg {
+  width: 2.35rem;
+  height: 2.35rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
+.contact-card__label {
+  margin: 0 0 0.55rem;
+  color: var(--color-accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contact-card h3 {
+  margin: 0;
+  color: var(--color-primary);
+  font-family: var(--font-title);
+  font-size: clamp(1.2rem, 2.4vw, 1.75rem);
+  font-weight: 400;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.contact-card__text {
+  margin: 1rem 0 2rem;
+  color: #515164;
+  line-height: 1.65;
+}
+
+.contact-card__action {
+  width: fit-content;
+  margin-top: auto;
+  padding: 0.9rem 1.35rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.contact-card__action:hover {
+  background: var(--color-primary);
+  transform: translateY(-0.15rem);
+}
+
+.contact-card__action:focus-visible {
+  outline: 0.2rem solid var(--color-primary);
+  outline-offset: 0.25rem;
+}
+
+.contact-tip {
+  padding: clamp(2.5rem, 5vw, 4rem) 0;
+  background: #f2f2ff;
+}
+
+.contact-tip__content {
+  display: flex;
+  max-width: 52rem;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.contact-tip__mark {
+  display: grid;
+  flex: 0 0 2.6rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-family: var(--font-title);
+}
+
+.contact-tip h2 {
+  margin: 0;
+  color: #11111e;
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.contact-tip p {
+  margin: 0.65rem 0 0;
+  color: #4d4d5d;
+  line-height: 1.6;
+}
+
+@media (max-width: 43rem) {
+  .contact-container {
+    width: min(100% - 2rem, 70rem);
+  }
+
+  .contact-heading {
+    padding-top: 3.5rem;
+  }
+
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-card {
+    min-height: 24rem;
+  }
+
+  .contact-card__action {
+    width: 100%;
+    text-align: center;
+  }
+}

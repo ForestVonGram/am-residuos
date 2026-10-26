@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/axm_residuos"
     timezone: str = "America/Bogota"
     allowed_origins: list[str] = Field(default_factory=list)
+    admin_api_key: str = "change-me-local-only"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,0 +1,63 @@
+<main class="admin-access">
+  <section class="admin-card" aria-labelledby="admin-login-title">
+    <header class="admin-card__header">
+      <div class="admin-brand">
+        <img
+          src="/images/logos/logo_axm_residuos.png"
+          alt=""
+          width="211"
+          height="114"
+        />
+        <span>Residuos<br />AXM</span>
+      </div>
+      <p>Panel administrativo</p>
+    </header>
+
+    <div class="admin-card__body">
+      <div class="login-heading">
+        <p>Acceso de prueba</p>
+        <h1 id="admin-login-title">Iniciar sesión</h1>
+        <span>
+          Este acceso es temporal y funciona únicamente en el navegador.
+        </span>
+      </div>
+
+      <form (ngSubmit)="submit()">
+        <label for="admin-email">Usuario</label>
+        <input
+          id="admin-email"
+          name="email"
+          type="email"
+          autocomplete="username"
+          [(ngModel)]="email"
+          required
+        />
+
+        <label for="admin-password">Contraseña</label>
+        <input
+          id="admin-password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          [(ngModel)]="password"
+          required
+        />
+
+        @if (errorMessage()) {
+          <p class="form-error" role="alert">{{ errorMessage() }}</p>
+        }
+
+        <button class="login-button" type="submit">Ingresar al panel</button>
+      </form>
+
+      <aside class="demo-access" aria-label="Credenciales de prueba">
+        <div>
+          <strong>Credenciales temporales</strong>
+          <span>{{ auth.demoEmail }}</span>
+          <span>{{ auth.demoPassword }}</span>
+        </div>
+        <button type="button" (click)="fillDemoCredentials()">Usar credenciales</button>
+      </aside>
+    </div>
+  </section>
+</main>
