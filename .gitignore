@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+backend/.env
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+coverage/
+frontend/.env
+
+# Editores y sistema
+.idea/
+.vscode/
+.DS_Store
