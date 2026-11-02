@@ -1,6 +1,6 @@
 # Registro de incidencias
 
-Hallazgos identificados durante pruebas y correcciones. “Pendiente de commit” indica que el cambio está en el árbol de trabajo pero aún no tiene hash asociado.
+Hallazgos identificados durante pruebas y correcciones, vinculados con los commits que los resuelven.
 
 | ID | Descripción | Severidad | Módulo | Estado | Commit/PR de corrección |
 |---|---|---|---|---|---|
@@ -11,9 +11,9 @@ Hallazgos identificados durante pruebas y correcciones. “Pendiente de commit�
 | INC-05 | Handler de validación devolvía errores Pydantic sin codificar tipos como `datetime`/`UUID`. | Media | API | Corregida con `jsonable_encoder` | `a36f1e9` |
 | INC-06 | Ruff detectó imports desordenados en el handler de validación. | Baja | Calidad | Corregida | `a36f1e9` |
 | INC-07 | Integración PostgreSQL no pudo ejecutarse porque Docker Engine no estaba disponible en el entorno. | Media | Integración | Pendiente de ejecución en entorno con PostgreSQL | N/A |
-| INC-08 | El enlace `#pqrs` no tenía destino y existían dos carpetas frontend huérfanas. | Baja | Frontend | PQRS marcado “próximamente”; componentes huérfanos eliminados | Pendiente de commit |
-| INC-09 | No había Compose con servicio `database`, ni imagen con `scripts/`/GeoJSON para seed y simulación. | Media | Infraestructura | Compose y Dockerfile actualizados; migraciones corren al inicio | Pendiente de commit |
-| INC-10 | Se mantenían dependencias divergentes en `backend/requirements`; el simulador requiere `httpx`. | Media | Dependencias | Archivo redundante eliminado y `httpx` declarado en `pyproject.toml` | `2ae0caa` y pendiente de commit |
+| INC-08 | El enlace `#pqrs` no tenía destino y existían dos carpetas frontend huérfanas. | Baja | Frontend | PQRS marcado “próximamente”; componentes huérfanos eliminados | `ec6648f` |
+| INC-09 | No había Compose con servicio `database`, ni imagen con `scripts/`/GeoJSON para seed y simulación. | Media | Infraestructura | Compose y Dockerfile actualizados; migraciones corren al inicio | `ec6648f` |
+| INC-10 | Se mantenían dependencias divergentes en `backend/requirements`; el simulador requiere `httpx`. | Media | Dependencias | Archivo redundante eliminado y `httpx` declarado en `pyproject.toml` | `2ae0caa`, `ec6648f` |
 
 ## Validación de la sesión
 
