@@ -46,6 +46,15 @@ class ScheduleItem(BaseModel):
     personnel: list[PublicPersonnel] = Field(default_factory=list)
 
 
+class VehiclePositionRead(BaseModel):
+    latitude: float
+    longitude: float
+    speed_kmh: float | None = None
+    heading: float | None = None
+    recorded_at: datetime
+    stale: bool = False
+
+
 class ETAResponse(BaseModel):
     route: RouteSummary
     requested_at: datetime
@@ -56,9 +65,16 @@ class ETAResponse(BaseModel):
     delay_minutes: int = Field(default=0, ge=0)
     truck: PublicTruck | None = None
     personnel: list[PublicPersonnel] = Field(default_factory=list)
-    source: Literal["scheduled"] = "scheduled"
+    source: Literal["live", "scheduled"] = "scheduled"
     is_live: bool = False
+    vehicle_position: VehiclePositionRead | None = None
+    distance_remaining_m: float | None = Field(default=None, ge=0)
+    minutes_remaining: float | None = Field(default=None, ge=0)
+    status: Literal[
+        "approaching", "arriving", "passed", "not_started", "cancelled", "scheduled"
+    ] = "scheduled"
+    confidence: Literal["high", "medium", "low"] = "low"
+    simulated: bool = False
     message: str = (
-        "Estimacion basada en el horario y la duracion programada; "
-        "aun no incorpora la ubicacion GPS del vehiculo."
+        "Estimación basada en el horario y la duración programada."
     )
