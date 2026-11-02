@@ -94,8 +94,11 @@ def calculate_live_eta(
         for sample in window
         if sample.speed_kmh is not None and sample.speed_kmh >= 0
     ]
+    scheduled_speed = (
+        route_distance / 1000 * 60 / duration_minutes if duration_minutes > 0 else 0
+    )
     if latest.speed_kmh == 0:
-        speed = route_distance / duration_minutes * 60 if duration_minutes > 0 else 0
+        speed = scheduled_speed
     elif speed_values:
         speed = mean(speed_values)
     else:
@@ -114,7 +117,7 @@ def calculate_live_eta(
                 speed = travelled / elapsed * 3.6
 
     if speed <= 0:
-        speed = route_distance / duration_minutes * 60 if duration_minutes > 0 else 5.0
+        speed = scheduled_speed if scheduled_speed > 0 else 5.0
     speed = max(5.0, min(40.0, speed))
     minutes = distance_remaining / (speed * 1000 / 60)
     status = "arriving" if minutes <= 5 else "approaching"

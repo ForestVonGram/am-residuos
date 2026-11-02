@@ -25,9 +25,14 @@ def upgrade() -> None:
         sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(["truck_id"], ["trucks.id"], ondelete="RESTRICT"),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("device_code"),
+        sa.ForeignKeyConstraint(
+            ["truck_id"],
+            ["trucks.id"],
+            name="fk_gps_devices_truck_id_trucks",
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("id", name="pk_gps_devices"),
+        sa.UniqueConstraint("device_code", name="uq_gps_devices_device_code"),
         sa.UniqueConstraint("truck_id", name="uq_gps_devices_one_device_per_truck"),
     )
     op.create_index("ix_gps_devices_device_code", "gps_devices", ["device_code"])
@@ -43,11 +48,27 @@ def upgrade() -> None:
         sa.Column("heading", sa.Float(), nullable=True),
         sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("received_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.CheckConstraint("latitude >= -90 AND latitude <= 90", name="valid_latitude"),
-        sa.CheckConstraint("longitude >= -180 AND longitude <= 180", name="valid_longitude"),
-        sa.ForeignKeyConstraint(["device_id"], ["gps_devices.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["truck_id"], ["trucks.id"], ondelete="RESTRICT"),
-        sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint(
+            "latitude >= -90 AND latitude <= 90",
+            name="ck_vehicle_positions_valid_latitude",
+        ),
+        sa.CheckConstraint(
+            "longitude >= -180 AND longitude <= 180",
+            name="ck_vehicle_positions_valid_longitude",
+        ),
+        sa.ForeignKeyConstraint(
+            ["device_id"],
+            ["gps_devices.id"],
+            name="fk_vehicle_positions_device_id_gps_devices",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["truck_id"],
+            ["trucks.id"],
+            name="fk_vehicle_positions_truck_id_trucks",
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("id", name="pk_vehicle_positions"),
         sa.UniqueConstraint("device_id", "recorded_at", name="uq_vehicle_positions_device_recorded_at"),
     )
     op.create_index("ix_vehicle_positions_recorded_at", "vehicle_positions", ["recorded_at"])
