@@ -1,107 +1,76 @@
-# Backend - AXM Residuos
+# Backend de AXM Residuos
 
-Backend local del sistema de rastreo, planificacion y seguimiento de la recoleccion de residuos solidos de Armenia. Incluye el modulo ciudadano y el modulo administrativo/operativo. No incluye frontend, PQRS ni telemetria GPS.
+API FastAPI con PostgreSQL, SQLAlchemy asíncrono y Alembic. Proporciona consultas ciudadanas, administración operativa y telemetría GPS **simulada**. No tiene conexión con vehículos físicos ni con la empresa de aseo; las rutas corresponden a los dos trazados de ejemplo del repositorio.
 
-## Que resuelve este modulo
+## Funcionalidad
 
-- Consulta las rutas de recoleccion activas y devuelve su trazado como GeoJSON.
-- Busca rutas cercanas a una coordenada a partir de trazados GeoJSON.
-- Consulta los horarios de una fecha concreta en la zona `America/Bogota`.
-- Estima la proxima llegada al punto de la ruta mas cercano al ciudadano.
-- Identifica de forma explicita la ETA como `scheduled` y `is_live: false`.
-- Muestra al ciudadano la placa y el nombre publico del camion asignado.
-- Muestra los nombres y roles del personal operativo asignado.
-- Refleja retrasos o cancelaciones informados para una fecha concreta.
+- Consulta rutas GeoJSON, horarios y ETA programada o en vivo.
+- Registra retrasos y cancelaciones para jornadas específicas.
+- Administra camiones, personal, horarios, asignaciones y dispositivos GPS.
+- Recibe posiciones con `X-Device-Token`, guarda solo hashes de tokens y descarta duplicados.
+- Expone posiciones recientes de camiones sin revelar tokens ni personal.
 
-## Que resuelve el modulo administrativo y operativo
+La telemetría se marca como simulada en la respuesta pública (`simulated: true`) y en la interfaz. El simulador usa `POST /api/v1/gps/positions`, que también es el endpoint preparado para dispositivos reales.
 
-- Crea, consulta, modifica y desactiva personal operativo.
-- Crea, consulta, modifica y desactiva camiones.
-- Configura horarios recurrentes de salida y su periodo de vigencia.
-- Asigna un camion y una cuadrilla a una ruta durante un periodo.
-- Exige que cada cuadrilla tenga al menos un conductor activo.
-- Evita que una ruta o camion tenga asignaciones incompatibles durante el mismo periodo.
-- Registra retrasos, motivos y cancelaciones sin modificar el horario recurrente.
+## Desarrollo local
 
-Las eliminaciones de personal, camiones, horarios y asignaciones son logicas: el registro se conserva y se marca como inactivo para no perder la trazabilidad basica.
+Requisitos: Python 3.12 o superior y PostgreSQL 14 o superior. Copia `backend/.env.example` a `backend/.env` y ajusta las variables según tu PostgreSQL local. Desde la raíz, el camino recomendado es:
 
-La ETA actual es determinista: proyecta el punto consultado sobre el `LineString`, obtiene la fraccion recorrida entre 0 y 1 y la multiplica por la duracion prevista de la jornada. Cuando se integre GPS, esta estimacion se podra reemplazar o complementar con velocidad y posicion reales sin cambiar el contrato publico principal.
+```sh
+docker compose up --build -d backend
+docker compose exec backend python scripts/seed_demo.py
+docker compose exec backend python scripts/simulate_gps.py --admin-key "change-me-local-only" --loop
+```
 
-## Modelo de datos
+Compose proporciona el servicio `database`; el contenedor backend ejecuta `alembic upgrade head` antes de iniciar Uvicorn y contiene `scripts/` y el GeoJSON usado por el seed.
 
-`collection_routes` guarda el codigo, nombre, sector y trazado GeoJSON `LineString` en una columna `JSONB`. `route_schedules` guarda dia de la semana (lunes = 0), hora de inicio, duracion esperada y periodo de vigencia.
+Para ejecutar el backend directamente en el host:
 
-`personnel` y `trucks` guardan el personal y los vehiculos. `route_assignments` relaciona una ruta con un camion y una cuadrilla durante un periodo. `service_adjustments` representa una novedad de una fecha determinada, como un retraso o una cancelacion.
-
-Las rutas siguen siendo elaboradas manualmente como GeoJSON. Este incremento no genera ni optimiza recorridos. Antes de consumir la API, esos datos deben cargarse en `collection_routes` y asociarse con al menos un horario vigente.
-
-## Ejecucion local
-
-Requisitos locales:
-
-- Python 3.12 o superior.
-- PostgreSQL 14 o superior.
-- Una base de datos llamada `axm_residuos`.
-
-La configuracion predeterminada de ejemplo espera PostgreSQL en `localhost:5432`. El usuario, la contrasena y los demas valores se configuran en el archivo `.env`.
-
-Los endpoints administrativos requieren el encabezado `X-Admin-Key`. Para desarrollo local, cambia `ADMIN_API_KEY` en `.env` antes de iniciar la aplicacion. La clave incluida en `.env.example` es solo un valor de demostracion.
-
-```bash
+```sh
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
-cp .env.example .env
+python -m venv .venv
+python -m pip install -e ".[dev]"
 alembic upgrade head
-.venv/bin/python scripts/seed_routes.py
+python scripts/seed_demo.py
 uvicorn app.main:app --reload
 ```
 
-El cargador de rutas es idempotente: crea o actualiza por codigo las rutas contenidas en `frontend/public/map-data/rutas.geojson`.
+La configuración de ejemplo y `change-me-local-only` son exclusivamente para desarrollo. La clave admin enviada desde `frontend/public/app-config.js` queda visible para cualquier usuario del navegador y no constituye una frontera de seguridad de producción.
 
-La API queda disponible en `http://localhost:8000` y su documentacion interactiva en `http://localhost:8000/docs`.
+Los comandos de ejemplo usan la clave demo predeterminada; sustitúyela por el valor local de `ADMIN_API_KEY` si lo cambias. El login Angular también es solo una simulación del MVP y no reemplaza autenticación real del servidor.
 
-## Endpoints publicos
+## Endpoints principales
 
-- `GET /health`: comprueba que el proceso responde.
-- `GET /api/v1/citizen/routes`: lista las rutas activas.
-- `GET /api/v1/citizen/routes?latitude=4.5339&longitude=-75.6811&radius_m=750`: busca rutas cercanas.
-- `GET /api/v1/citizen/routes/{route_id}`: devuelve detalle y geometria GeoJSON.
-- `GET /api/v1/citizen/schedules?service_date=2026-10-26`: consulta jornadas del dia.
-- `GET /api/v1/citizen/eta?latitude=4.5339&longitude=-75.6811`: obtiene la siguiente ETA programada.
+### Públicos
 
-Los parametros geograficos se validan y la busqueda se limita por defecto a 750 metros. El radio permitido va de 50 a 10.000 metros.
+- `GET /health`
+- `GET /api/v1/citizen/routes`
+- `GET /api/v1/citizen/routes/{route_id}`
+- `GET /api/v1/citizen/schedules?service_date=YYYY-MM-DD`
+- `GET /api/v1/citizen/vehicles/live`
+- `GET /api/v1/citizen/eta?latitude=4.5339&longitude=-75.6811`
 
-## Endpoints administrativos
+### Administración
 
-Todos los siguientes endpoints usan el prefijo `/api/v1/admin` y requieren `X-Admin-Key`:
+Usan `X-Admin-Key` bajo `/api/v1/admin`: personal, camiones, horarios, asignaciones, ajustes de servicio y `/gps-devices`. Al crear o regenerar un dispositivo, el token en claro se devuelve una sola vez.
 
-- `GET|POST /personnel`
-- `PATCH|DELETE /personnel/{personnel_id}`
-- `GET|POST /trucks`
-- `PATCH|DELETE /trucks/{truck_id}`
-- `GET|POST /schedules`
-- `PATCH|DELETE /schedules/{schedule_id}`
-- `GET|POST /assignments`
-- `PATCH|DELETE /assignments/{assignment_id}`
-- `GET|PUT /service-adjustments`
-- `DELETE /service-adjustments/{schedule_id}/{service_date}`
+### Ingesta GPS
 
-Ejemplo de autenticacion local:
+`POST /api/v1/gps/positions` acepta una posición o un lote de hasta 50 con `X-Device-Token`. Rechaza tokens inactivos, coordenadas fuera de rango y fechas más de un minuto en el futuro. Las repeticiones de `(device_id, recorded_at)` se reportan como duplicados.
 
-```bash
-curl -H 'X-Admin-Key: la-clave-definida-en-env' \
-  http://localhost:8000/api/v1/admin/trucks
+## Simulación y seed
+
+`scripts/seed_demo.py` carga de forma idempotente las rutas GeoJSON, dos camiones, cuadrillas, horarios recurrentes y dispositivos. Imprime los tokens demo; volver a sembrar rota esos tokens.
+
+`scripts/simulate_gps.py --admin-key <clave>` lee asignaciones activas, crea o regenera dispositivos vía API y envía posiciones con ruido de 3–5 m. Opciones: `--speed-kmh`, `--interval`, `--speedup`, `--dropout-prob`, `--pause-at`, `--pause-seconds`, `--offline-after` y `--loop`. `scripts/validate_eta.py` recorre una ruta acelerada y reporta el error medio absoluto entre las ETA observadas y la llegada simulada.
+
+## Pruebas
+
+```sh
+python -m pytest
+python -m ruff check app tests scripts
 ```
 
-Un retraso se registra mediante `PUT`, por lo que enviar de nuevo la misma combinacion de horario y fecha actualiza la novedad en lugar de duplicarla.
+Las pruebas de integración están marcadas `integration` y requieren `TEST_DATABASE_URL` apuntando a una base PostgreSQL **dedicada y vacía**. El fixture actualiza sus migraciones y trunca sus tablas antes de cada prueba; no apuntes esa variable a una base con datos que debas conservar. Instrucciones y casos manuales: `docs/PLAN_PRUEBAS.md`.
 
-## Pruebas y calidad
-
-```bash
-pytest
-ruff check app tests
-```
-
-Las pruebas unitarias cubren el calculo temporal, las operaciones geograficas sobre GeoJSON y las validaciones principales del contrato HTTP. Las consultas persistentes deben cubrirse adicionalmente con pruebas de integracion contra el servicio `database`.
+La configuración CORS proviene de `ALLOWED_ORIGINS`; métodos permitidos: GET, POST, PATCH, PUT, DELETE y OPTIONS. La conexión de base de datos no necesita extensiones espaciales: las geometrías son GeoJSON en JSONB.

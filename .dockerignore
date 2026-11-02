@@ -1,0 +1,10 @@
+.git
+.env
+**/.coverage
+**/.pytest_cache
+**/.ruff_cache
+**/__pycache__
+**/.venv
+**/node_modules
+frontend/.angular
+frontend/dist

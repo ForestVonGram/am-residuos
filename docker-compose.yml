@@ -1,0 +1,39 @@
+services:
+  database:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-axm_residuos}
+      POSTGRES_USER: ${POSTGRES_USER:-axm_demo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-axm_demo}
+    ports:
+      - "5432:5432"
+    volumes:
+      - axm_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-axm_demo} -d ${POSTGRES_DB:-axm_residuos}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-axm_demo}:${POSTGRES_PASSWORD:-axm_demo}@database:5432/${POSTGRES_DB:-axm_residuos}
+      TIMEZONE: ${TIMEZONE:-America/Bogota}
+      ALLOWED_ORIGINS: '["http://localhost:4200"]'
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-change-me-local-only}
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+volumes:
+  axm_postgres_data:
