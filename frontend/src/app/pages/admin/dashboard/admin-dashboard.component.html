@@ -759,7 +759,10 @@
             @case ('gps-devices') {
               <div class="gps-simulation-note">
                 Los dispositivos y sus ubicaciones son simulados. El token solo se entrega al
-                crear o regenerar el dispositivo.
+                crear o regenerar el dispositivo. Para iniciar recorridos simulados sobre rutas
+                asignadas, ejecuta
+                <code>docker compose --profile gps-simulation up -d gps-simulator</code> desde la
+                raíz del proyecto.
               </div>
               <table>
                 <thead>

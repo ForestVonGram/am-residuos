@@ -4,36 +4,30 @@ MVP universitario para consultar rutas y horarios de recolección en Armenia, Qu
 
 ## Inicio rápido
 
-Requisitos: Docker Compose, Node.js 22.22.3 o superior y npm.
+Requisito: Docker Compose.
 
-1. Copia `.env.example` como `.env` y ajusta `ADMIN_API_KEY` para tu demo.
-2. Ejecuta `docker compose up --build -d backend` desde la raíz. Se inicia PostgreSQL y el backend aplica las migraciones al arrancar.
+1. Copia `.env.example` como `.env` si todavía no existe y configura `ADMIN_API_KEY` para tu demo.
+2. Ejecuta `docker compose up --build -d` desde la raíz. Se inician PostgreSQL, backend y frontend; el backend aplica las migraciones al arrancar.
 3. Carga rutas, camiones, asignaciones y dispositivos demo:
 
    ```sh
    docker compose exec backend python scripts/seed_demo.py --start-in-minutes 2
    ```
 
-4. En `frontend/public/app-config.js`, configura `adminApiKey` con el valor local de `ADMIN_API_KEY`. Es configuración de demostración visible en el navegador; nunca la uses como secreto de producción.
-5. En otra terminal:
+4. Abre `http://localhost:4200`. La interfaz reenvía las llamadas `/api` al backend; la API y su documentación están en `http://localhost:8000` y `http://localhost:8000/docs`.
+5. Para iniciar la simulación continua de GPS sobre las rutas con asignaciones activas:
 
    ```sh
-   cd frontend
-   npm ci
-   npm start
+   docker compose --profile gps-simulation up -d gps-simulator
    ```
 
-6. Inicia los dos vehículos simulados:
-
-   ```sh
-   docker compose exec backend python scripts/simulate_gps.py --admin-key "change-me-local-only" --loop
-   ```
-
-7. Abre `http://localhost:4200/rutas`; la API y su documentación están en `http://localhost:8000` y `http://localhost:8000/docs`.
+   Detenla con `docker compose stop gps-simulator`. El estado de conexión aparece en **Administración → Dispositivos GPS**; usa **Actualizar** para consultar el último estado.
 
 El simulador aprovisiona o regenera las credenciales de dispositivo vía API admin y envía posiciones a la misma ruta de ingesta que usaría un dispositivo físico (`POST /api/v1/gps/positions`). Consulta el guion en [docs/DEMO.md](./docs/DEMO.md).
 
-Los comandos de ejemplo usan `change-me-local-only`; reemplázalo por el valor configurado en `.env` si cambias la clave.
+En el panel se pueden crear camiones desde **Gestionar camiones**, asociarlos a rutas desde **Gestionar asignaciones** y consultar los dispositivos simulados en **Dispositivos GPS**. El simulador requiere asignaciones activas; para camiones nuevos, asígnalos primero a una ruta vigente.
+
+La clave admin se inyecta en el bundle del frontend durante la construcción y queda visible para cualquier usuario del navegador. La clave demo y el login simulado son solo para desarrollo; no los uses como mecanismo de autenticación de producción.
 
 ## Pruebas
 
@@ -43,5 +37,7 @@ python -m pip install -e ".[dev]"
 python -m pytest
 python -m ruff check app tests scripts
 ```
+
+El frontend también puede ejecutarse fuera de Docker con `cd frontend`, `npm ci` y `npm start`; en ese caso se usa el proxy local y `frontend/public/app-config.js`.
 
 Las pruebas PostgreSQL se ejecutan por separado y requieren una base de pruebas dedicada; consulta [docs/PLAN_PRUEBAS.md](./docs/PLAN_PRUEBAS.md). La guía de incidencias está en [docs/INCIDENCIAS.md](./docs/INCIDENCIAS.md).

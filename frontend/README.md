@@ -1,5 +1,13 @@
 # Frontend
 
+## Integración con Docker Compose
+
+Desde la raíz del repositorio, `docker compose up --build -d` construye y ejecuta la interfaz junto con la API y PostgreSQL. Abre `http://localhost:4200`; Nginx sirve Angular y reenvía `/api` al backend.
+
+La clave `ADMIN_API_KEY` del `.env` se incorpora en el bundle del navegador para la demo. No la uses como secreto ni como autenticación de producción.
+
+## Desarrollo local
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.4.
 
 ## Development server
