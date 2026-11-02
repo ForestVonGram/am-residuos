@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.gps import GPSDevice
     from app.models.route import CollectionRoute, RouteSchedule
 
 assignment_personnel = Table(
@@ -79,6 +80,7 @@ class Truck(TimestampMixin, Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", index=True)
 
     assignments: Mapped[list["RouteAssignment"]] = relationship(back_populates="truck")
+    gps_device: Mapped["GPSDevice | None"] = relationship(back_populates="truck", uselist=False)
 
 
 class RouteAssignment(TimestampMixin, Base):

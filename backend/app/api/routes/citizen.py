@@ -4,14 +4,20 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.api.dependencies import CitizenServiceDependency
+from app.api.dependencies import CitizenServiceDependency, GPSServiceDependency
 from app.schemas.citizen import ETAResponse, RouteDetail, RouteSummary, ScheduleItem
+from app.schemas.gps import LiveVehicle
 from app.services.citizen import RouteNotFoundError
 
 router = APIRouter()
 
 Latitude = Annotated[float, Query(ge=-90, le=90, examples=[4.5339])]
 Longitude = Annotated[float, Query(ge=-180, le=180, examples=[-75.6811])]
+
+
+@router.get("/vehicles/live", response_model=list[LiveVehicle])
+async def list_live_vehicles(service: GPSServiceDependency) -> list[LiveVehicle]:
+    return await service.live_vehicles()
 
 
 @router.get("/routes", response_model=list[RouteSummary])
@@ -24,7 +30,7 @@ async def list_routes(
     """Lista rutas activas; si hay coordenadas, limita el resultado por cercania."""
     if (latitude is None) != (longitude is None):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="latitude y longitude deben enviarse juntas",
         )
     return await service.list_routes(latitude, longitude, radius_m)

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Response, status
 
-from app.api.dependencies import AdminServiceDependency
+from app.api.dependencies import AdminServiceDependency, GPSServiceDependency
 from app.schemas.admin import (
     AssignmentCreate,
     AssignmentRead,
@@ -21,6 +21,7 @@ from app.schemas.admin import (
     TruckRead,
     TruckUpdate,
 )
+from app.schemas.gps import GPSDeviceCreate, GPSDeviceCreated, GPSDeviceRead, GPSDeviceUpdate
 
 router = APIRouter()
 
@@ -153,3 +154,41 @@ async def delete_service_adjustment(
 ) -> Response:
     await service.delete_adjustment(schedule_id, service_date)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/gps-devices", response_model=list[GPSDeviceRead])
+async def list_gps_devices(service: GPSServiceDependency) -> list[GPSDeviceRead]:
+    return await service.list_devices()
+
+
+@router.post(
+    "/gps-devices", response_model=GPSDeviceCreated, status_code=status.HTTP_201_CREATED
+)
+async def create_gps_device(
+    data: GPSDeviceCreate, service: GPSServiceDependency
+) -> GPSDeviceCreated:
+    device, token = await service.create_device(data)
+    return GPSDeviceCreated(device=device, token=token)
+
+
+@router.patch("/gps-devices/{device_id}", response_model=GPSDeviceRead)
+async def update_gps_device(
+    device_id: UUID, data: GPSDeviceUpdate, service: GPSServiceDependency
+) -> GPSDeviceRead:
+    return await service.update_device(device_id, data)
+
+
+@router.delete("/gps-devices/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def deactivate_gps_device(
+    device_id: UUID, service: GPSServiceDependency
+) -> Response:
+    await service.deactivate_device(device_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/gps-devices/{device_id}/regenerate-token", response_model=GPSDeviceCreated)
+async def regenerate_gps_device_token(
+    device_id: UUID, service: GPSServiceDependency
+) -> GPSDeviceCreated:
+    device, token = await service.regenerate_token(device_id)
+    return GPSDeviceCreated(device=device, token=token)

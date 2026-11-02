@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db_session
 from app.repositories.admin import AdminRepository
 from app.repositories.citizen import CitizenRepository
+from app.repositories.gps import GPSRepository
 from app.services.admin import AdminService
 from app.services.citizen import CitizenService
+from app.services.gps import GPSService
 
 DatabaseSession = Annotated[AsyncSession, Depends(get_db_session)]
 
@@ -24,3 +26,10 @@ def get_admin_service(session: DatabaseSession) -> AdminService:
 
 
 AdminServiceDependency = Annotated[AdminService, Depends(get_admin_service)]
+
+
+def get_gps_service(session: DatabaseSession) -> GPSService:
+    return GPSService(GPSRepository(session))
+
+
+GPSServiceDependency = Annotated[GPSService, Depends(get_gps_service)]

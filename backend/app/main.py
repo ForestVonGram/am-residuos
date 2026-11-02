@@ -33,8 +33,8 @@ if settings.allowed_origins:
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
         allow_credentials=False,
-        allow_methods=["GET"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["X-Admin-Key", "X-Device-Token", "Content-Type"],
     )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
