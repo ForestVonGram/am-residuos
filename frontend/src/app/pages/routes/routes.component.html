@@ -18,6 +18,7 @@
             : 'Información actualizada desde el sistema'
         }}
       </div>
+      <span class="simulation-badge">Simulación GPS · datos demostrativos</span>
 
       <div class="route-selector" aria-label="Rutas disponibles">
         @for (route of routes(); track route.id) {
@@ -99,6 +100,7 @@
                 } @else {
                   <p class="operation-empty">No hay operarios asignados a esta jornada.</p>
                 }
+
               </div>
             </section>
           } @else {
@@ -109,6 +111,53 @@
           }
         </article>
       }
+
+      <section class="eta-card" aria-labelledby="eta-title">
+        <h2 id="eta-title">¿Cuándo llega el camión a mi ubicación?</h2>
+        <p>Haz clic en el mapa para elegir un punto o comparte tu ubicación.</p>
+        <div class="eta-actions">
+          <button type="button" (click)="requestEtaForMapPoint()">Consultar punto del mapa</button>
+          <button type="button" class="eta-secondary" (click)="requestEtaForCurrentLocation()">
+            Usar mi ubicación
+          </button>
+        </div>
+        @if (etaLoading()) {
+          <p class="eta-feedback" role="status">Calculando tiempo estimado…</p>
+        }
+        @if (etaError()) {
+          <p class="eta-feedback eta-feedback--error" role="alert">{{ etaError() }}</p>
+        }
+        @if (eta(); as result) {
+          <div class="eta-result" aria-live="polite">
+            <strong>
+              @if (result.minutes_remaining !== null) {
+                Llega en ~{{ Math.round(result.minutes_remaining) }} min
+              } @else {
+                {{ formatEtaTime(result.estimated_arrival) }}
+              }
+            </strong>
+            <span>Hora estimada: {{ formatEtaTime(result.estimated_arrival) }}</span>
+            <span>
+              Distancia restante: {{ formatRemainingDistance(result.distance_remaining_m) }}
+            </span>
+            <span>{{ etaStatusLabel(result.status) }} · {{ result.message }}</span>
+            <small>
+              {{ result.is_live ? 'Estimación en vivo' : 'Estimación programada' }}
+              @if (result.simulated) { · Simulación }
+            </small>
+          </div>
+        }
+      </section>
+
+      <section class="live-status" aria-label="Estado de vehículos">
+        @if (liveVehicleError()) {
+          <p role="status">{{ liveVehicleError() }}</p>
+        } @else if (liveVehicles().length === 0) {
+          <p>No hay camiones activos con señal GPS en este momento.</p>
+        } @else {
+          <p>{{ liveVehicles().length }} camión(es) activos · actualización cada 5 s</p>
+        }
+      </section>
     </div>
 
     <div class="map-panel">
@@ -129,6 +178,7 @@
       <div class="map-legend" aria-label="Leyenda del mapa">
         <span><i class="map-legend__line map-legend__line--active"></i>Ruta seleccionada</span>
         <span><i class="map-legend__line"></i>Otra ruta</span>
+        <span><i class="map-legend__vehicle">🚛</i>Camión · Simulación</span>
       </div>
     </div>
   </section>

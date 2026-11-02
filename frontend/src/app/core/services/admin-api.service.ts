@@ -54,6 +54,18 @@ export interface AdjustmentRecord {
   reason: string | null;
 }
 
+export interface GPSDeviceRecord {
+  id: string;
+  device_code: string;
+  truck_id: string;
+  truck_plate: string;
+  active: boolean;
+  online: boolean;
+  last_seen_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AdminOverviewData {
   personnel: PersonnelRecord[];
   trucks: TruckRecord[];
@@ -61,6 +73,19 @@ export interface AdminOverviewData {
   schedules: ScheduleRecord[];
   assignments: AssignmentRecord[];
   adjustments: AdjustmentRecord[];
+  gpsDevices: GPSDeviceRecord[];
+}
+
+export interface GPSDeviceCreate {
+  device_code: string;
+  truck_id: string;
+}
+
+export type GPSDeviceUpdate = Partial<Pick<GPSDeviceRecord, 'truck_id' | 'active'>>;
+
+export interface GPSDeviceCreated {
+  device: GPSDeviceRecord;
+  token: string;
 }
 
 export type PersonnelWrite = Omit<PersonnelRecord, 'id' | 'active'>;
@@ -107,6 +132,10 @@ export class AdminApiService {
       assignments: this.http.get<AssignmentRecord[]>(`${this.adminUrl}/assignments`, this.options),
       adjustments: this.http.get<AdjustmentRecord[]>(
         `${this.adminUrl}/service-adjustments`,
+        this.options,
+      ),
+      gpsDevices: this.http.get<GPSDeviceRecord[]>(
+        `${this.adminUrl}/gps-devices`,
         this.options,
       ),
     });
@@ -175,6 +204,34 @@ export class AdminApiService {
   deleteAdjustment(scheduleId: string, serviceDate: string): Observable<void> {
     return this.http.delete<void>(
       `${this.adminUrl}/service-adjustments/${scheduleId}/${serviceDate}`,
+      this.options,
+    );
+  }
+
+  createGpsDevice(data: GPSDeviceCreate): Observable<GPSDeviceCreated> {
+    return this.http.post<GPSDeviceCreated>(
+      `${this.adminUrl}/gps-devices`,
+      data,
+      this.options,
+    );
+  }
+
+  updateGpsDevice(id: string, data: GPSDeviceUpdate): Observable<GPSDeviceRecord> {
+    return this.http.patch<GPSDeviceRecord>(
+      `${this.adminUrl}/gps-devices/${id}`,
+      data,
+      this.options,
+    );
+  }
+
+  deactivateGpsDevice(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.adminUrl}/gps-devices/${id}`, this.options);
+  }
+
+  regenerateGpsDeviceToken(id: string): Observable<GPSDeviceCreated> {
+    return this.http.post<GPSDeviceCreated>(
+      `${this.adminUrl}/gps-devices/${id}/regenerate-token`,
+      {},
       this.options,
     );
   }

@@ -1,5 +1,13 @@
 import { Injectable, computed, signal } from '@angular/core';
 
+declare global {
+  interface Window {
+    AXM_CONFIG?: {
+      adminApiKey?: string;
+    };
+  }
+}
+
 export interface AdminUser {
   name: string;
   email: string;
@@ -17,7 +25,7 @@ export class AdminAuthService {
   readonly isAuthenticated = computed(() => this.userState() !== null);
 
   get adminApiKey(): string {
-    return 'change-me-local-only';
+    return window.AXM_CONFIG?.adminApiKey ?? '';
   }
 
   login(email: string, password: string): boolean {

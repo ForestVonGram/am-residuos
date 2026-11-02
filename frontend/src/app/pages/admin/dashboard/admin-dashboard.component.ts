@@ -18,11 +18,18 @@ import {
   ScheduleWrite,
   TruckRecord,
   TruckWrite,
+  GPSDeviceRecord,
 } from '../../../core/services/admin-api.service';
 import { AdminAuthService } from '../../../core/services/admin-auth.service';
 
 type AdminSection =
-  'overview' | 'personnel' | 'trucks' | 'schedules' | 'assignments' | 'adjustments';
+  | 'overview'
+  | 'personnel'
+  | 'trucks'
+  | 'schedules'
+  | 'assignments'
+  | 'adjustments'
+  | 'gps-devices';
 
 type EditableSection = Exclude<AdminSection, 'overview'>;
 
@@ -33,6 +40,7 @@ const EMPTY_DATA: AdminOverviewData = {
   schedules: [],
   assignments: [],
   adjustments: [],
+  gpsDevices: [],
 };
 
 const emptyPersonnel = (): PersonnelWrite => ({
@@ -78,6 +86,8 @@ const emptyAdjustment = (): AdjustmentWrite => ({
   reason: null,
 });
 
+const emptyGpsDevice = () => ({ device_code: '', truck_id: '', active: true });
+
 @Component({
   selector: 'app-admin-dashboard',
   imports: [FormsModule],
@@ -95,6 +105,7 @@ export class AdminDashboardComponent implements OnInit {
   protected readonly saving = signal(false);
   protected readonly formError = signal('');
   protected readonly successMessage = signal('');
+  protected readonly gpsDeviceToken = signal('');
   protected readonly sectionTitle = computed(() => {
     const titles: Record<AdminSection, string> = {
       overview: 'Panel administrativo',
@@ -103,6 +114,7 @@ export class AdminDashboardComponent implements OnInit {
       schedules: 'Gestión de horarios',
       assignments: 'Gestión de asignaciones',
       adjustments: 'Novedades del servicio',
+      'gps-devices': 'Dispositivos GPS',
     };
     return titles[this.activeSection()];
   });
@@ -112,6 +124,7 @@ export class AdminDashboardComponent implements OnInit {
   protected scheduleForm = emptySchedule();
   protected assignmentForm = emptyAssignment();
   protected adjustmentForm = emptyAdjustment();
+  protected gpsDeviceForm = emptyGpsDevice();
 
   private readonly api = inject(AdminApiService);
   private readonly router = inject(Router);
@@ -198,6 +211,88 @@ export class AdminDashboardComponent implements OnInit {
       cancelled: adjustment.cancelled,
       reason: adjustment.reason,
     };
+  }
+
+  protected editGpsDevice(device: GPSDeviceRecord): void {
+    this.prepareEdit('gps-devices', device.id);
+    this.gpsDeviceForm = {
+      device_code: device.device_code,
+      truck_id: device.truck_id,
+      active: device.active,
+    };
+  }
+
+  protected saveGpsDevice(): void {
+    const id = this.editingId();
+    if (id) {
+      this.perform(
+        this.api.updateGpsDevice(id, {
+          truck_id: this.gpsDeviceForm.truck_id,
+          active: this.gpsDeviceForm.active,
+        }),
+        'Dispositivo GPS actualizado.',
+      );
+      return;
+    }
+
+    this.saving.set(true);
+    this.formError.set('');
+    this.api
+      .createGpsDevice({
+        device_code: this.gpsDeviceForm.device_code.trim(),
+        truck_id: this.gpsDeviceForm.truck_id,
+      })
+      .pipe(
+        finalize(() => this.saving.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (created) => {
+          this.gpsDeviceToken.set(created.token);
+          this.closeForm();
+          this.successMessage.set('Dispositivo creado. Guarda el token: solo se muestra una vez.');
+          this.loadData();
+        },
+        error: (error: HttpErrorResponse) => this.formError.set(this.errorMessage(error)),
+      });
+  }
+
+  protected toggleGpsDevice(device: GPSDeviceRecord): void {
+    this.perform(
+      this.api.updateGpsDevice(device.id, { active: !device.active }),
+      device.active ? 'Dispositivo GPS desactivado.' : 'Dispositivo GPS activado.',
+    );
+  }
+
+  protected deactivateGpsDevice(device: GPSDeviceRecord): void {
+    if (!confirm(`¿Desactivar el dispositivo ${device.device_code}?`)) return;
+    this.perform(this.api.deactivateGpsDevice(device.id), 'Dispositivo GPS desactivado.');
+  }
+
+  protected hideGpsToken(): void {
+    this.gpsDeviceToken.set('');
+  }
+
+  protected regenerateGpsDeviceToken(device: GPSDeviceRecord): void {
+    if (!confirm(`El token actual de ${device.device_code} dejará de funcionar. ¿Continuar?`)) {
+      return;
+    }
+    this.saving.set(true);
+    this.formError.set('');
+    this.api
+      .regenerateGpsDeviceToken(device.id)
+      .pipe(
+        finalize(() => this.saving.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (result) => {
+          this.gpsDeviceToken.set(result.token);
+          this.successMessage.set('Token regenerado. Guárdalo ahora; no se volverá a mostrar.');
+          this.loadData();
+        },
+        error: (error: HttpErrorResponse) => this.formError.set(this.errorMessage(error)),
+      });
   }
 
   protected savePersonnel(): void {
@@ -385,6 +480,7 @@ export class AdminDashboardComponent implements OnInit {
     if (section === 'schedules') this.scheduleForm = emptySchedule();
     if (section === 'assignments') this.assignmentForm = emptyAssignment();
     if (section === 'adjustments') this.adjustmentForm = emptyAdjustment();
+    if (section === 'gps-devices') this.gpsDeviceForm = emptyGpsDevice();
   }
 
   private perform(request: Observable<unknown>, message: string): void {

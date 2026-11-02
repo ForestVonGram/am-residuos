@@ -33,6 +33,47 @@ export interface RouteSchedule {
   personnel: Array<{ name: string; role: string }>;
 }
 
+export interface LiveVehicle {
+  truck_plate: string;
+  truck_name: string;
+  latitude: number;
+  longitude: number;
+  speed_kmh: number | null;
+  heading: number | null;
+  recorded_at: string;
+  stale: boolean;
+  route_id: string;
+  simulated: boolean;
+}
+
+export interface ETAResponse {
+  route: RouteSummary;
+  requested_at: string;
+  scheduled_start: string;
+  estimated_arrival: string;
+  distance_to_route_m: number;
+  progress_fraction: number;
+  delay_minutes: number;
+  truck: { plate: string; name: string } | null;
+  personnel: Array<{ name: string; role: string }>;
+  source: 'live' | 'scheduled';
+  is_live: boolean;
+  vehicle_position: {
+    latitude: number;
+    longitude: number;
+    speed_kmh: number | null;
+    heading: number | null;
+    recorded_at: string;
+    stale: boolean;
+  } | null;
+  distance_remaining_m: number | null;
+  minutes_remaining: number | null;
+  status: 'approaching' | 'arriving' | 'passed' | 'not_started' | 'cancelled' | 'scheduled';
+  confidence: 'high' | 'medium' | 'low';
+  simulated: boolean;
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CitizenRoutesService {
   private readonly http = inject(HttpClient);
@@ -51,5 +92,17 @@ export class CitizenRoutesService {
     if (serviceDate) params = params.set('service_date', serviceDate);
     if (routeId) params = params.set('route_id', routeId);
     return this.http.get<RouteSchedule[]>(`${this.baseUrl}/schedules`, { params });
+  }
+
+  getEta(latitude: number, longitude: number, routeId?: string): Observable<ETAResponse> {
+    let params = new HttpParams()
+      .set('latitude', latitude)
+      .set('longitude', longitude);
+    if (routeId) params = params.set('route_id', routeId);
+    return this.http.get<ETAResponse>(`${this.baseUrl}/eta`, { params });
+  }
+
+  listLiveVehicles(): Observable<LiveVehicle[]> {
+    return this.http.get<LiveVehicle[]>(`${this.baseUrl}/vehicles/live`);
   }
 }

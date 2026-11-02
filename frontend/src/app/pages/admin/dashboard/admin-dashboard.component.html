@@ -99,6 +99,17 @@
             <strong>Gestionar novedades</strong>
             <small>{{ data().adjustments.length }} registros</small>
           </button>
+
+          <button type="button" (click)="openSection('gps-devices')">
+            <span class="management-icon">
+              <svg viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M32 6v52M6 32h52M13 13l38 38M51 13 13 51" />
+                <circle cx="32" cy="32" r="13" />
+              </svg>
+            </span>
+            <strong>Dispositivos GPS</strong>
+            <small>{{ data().gpsDevices.length }} dispositivos</small>
+          </button>
         </div>
       } @else {
         <div class="section-toolbar">
@@ -127,6 +138,14 @@
 
         @if (successMessage()) {
           <p class="feedback feedback--success" role="status">{{ successMessage() }}</p>
+        }
+
+        @if (gpsDeviceToken()) {
+          <aside class="gps-token-notice" role="status">
+            <strong>Token de dispositivo · guárdalo ahora</strong>
+            <code>{{ gpsDeviceToken() }}</code>
+            <button type="button" (click)="hideGpsToken()">Ocultar token</button>
+          </aside>
         }
 
         @if (formOpen()) {
@@ -453,6 +472,53 @@
                   </div>
                 </form>
               }
+              @case ('gps-devices') {
+                <form class="record-form" #gpsDeviceFormRef="ngForm" (ngSubmit)="saveGpsDevice()">
+                  @if (!editingId()) {
+                    <label class="field-wide"
+                      >Código de dispositivo<input
+                        name="deviceCode"
+                        [(ngModel)]="gpsDeviceForm.device_code"
+                        required
+                        maxlength="80"
+                        placeholder="Ej. GPS-AXM-001"
+                    /></label>
+                  } @else {
+                    <p class="field-wide gps-device-code">
+                      Código: <strong>{{ gpsDeviceForm.device_code }}</strong>
+                    </p>
+                  }
+                  <label class="field-wide"
+                    >Camión asociado<select
+                      name="gpsTruck"
+                      [(ngModel)]="gpsDeviceForm.truck_id"
+                      required
+                    >
+                      <option value="" disabled>Selecciona un camión</option>
+                      @for (truck of data().trucks; track truck.id) {
+                        <option [value]="truck.id">{{ truck.name }} · {{ truck.plate }}</option>
+                      }
+                    </select></label
+                  >
+                  @if (editingId()) {
+                    <label class="check-field field-wide"
+                      ><input
+                        name="gpsDeviceActive"
+                        type="checkbox"
+                        [(ngModel)]="gpsDeviceForm.active"
+                      /><span><strong>Dispositivo activo</strong></span></label
+                    >
+                  }
+                  <div class="form-actions">
+                    <button type="button" class="secondary-button" (click)="closeForm()">
+                      Cancelar
+                    </button>
+                    <button type="submit" [disabled]="gpsDeviceFormRef.invalid || saving()">
+                      {{ saving() ? 'Guardando…' : 'Guardar dispositivo' }}
+                    </button>
+                  </div>
+                </form>
+              }
             }
 
             @if (formError()) {
@@ -685,6 +751,60 @@
                   } @empty {
                     <tr>
                       <td class="empty-records" colspan="5">No hay novedades registradas.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @case ('gps-devices') {
+              <div class="gps-simulation-note">
+                Los dispositivos y sus ubicaciones son simulados. El token solo se entrega al
+                crear o regenerar el dispositivo.
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dispositivo</th>
+                    <th>Camión</th>
+                    <th>Conexión</th>
+                    <th>Estado</th>
+                    <th class="actions-column">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (device of data().gpsDevices; track device.id) {
+                    <tr>
+                      <td>{{ device.device_code }}</td>
+                      <td>{{ device.truck_plate }}</td>
+                      <td>
+                        <span
+                          class="record-status"
+                          [class.record-status--warning]="!device.online"
+                          >{{ device.online ? 'En línea' : 'Sin señal' }}</span
+                        >
+                      </td>
+                      <td>{{ device.active ? 'Activo' : 'Inactivo' }}</td>
+                      <td>
+                        <div class="row-actions">
+                          <button type="button" (click)="editGpsDevice(device)">Asociar</button>
+                          <button type="button" (click)="toggleGpsDevice(device)">
+                            {{ device.active ? 'Desactivar' : 'Activar' }}
+                          </button>
+                          <button
+                            type="button"
+                            class="danger-action"
+                            (click)="regenerateGpsDeviceToken(device)"
+                          >
+                            Regenerar token
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td class="empty-records" colspan="5">
+                        No hay dispositivos GPS. Crea uno para asociarlo a un camión.
+                      </td>
                     </tr>
                   }
                 </tbody>

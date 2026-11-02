@@ -18,14 +18,18 @@ import type {
 import {
   GeoJSONSource,
   LngLatBounds,
-  Map,
+  Map as GLMap,
+  Marker,
   NavigationControl,
   setWorkerUrl,
   StyleSpecification,
 } from 'maplibre-gl';
 import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   CitizenRoutesService,
+  ETAResponse,
+  LiveVehicle,
   RouteSchedule,
 } from '../../core/services/citizen-routes.service';
 
@@ -52,11 +56,18 @@ type RoutesCollection = FeatureCollection<LineString, GeoJsonRouteProperties>;
 export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('mapContainer') private mapContainer?: ElementRef<HTMLElement>;
 
+  protected readonly Math = Math;
   protected readonly routes = signal<readonly RouteView[]>([]);
   protected readonly selectedRouteId = signal('');
   protected readonly loading = signal(true);
   protected readonly mapReady = signal(false);
   protected readonly usingLocalData = signal(true);
+  protected readonly liveVehicles = signal<readonly LiveVehicle[]>([]);
+  protected readonly liveVehicleError = signal('');
+  protected readonly eta = signal<ETAResponse | null>(null);
+  protected readonly etaError = signal('');
+  protected readonly etaLoading = signal(false);
+  protected readonly citizenLocation = signal<[number, number] | null>(null);
   protected readonly selectedRoute = computed(
     () =>
       this.routes().find((route) => route.id === this.selectedRouteId()) ??
@@ -65,7 +76,10 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private readonly routeService = inject(CitizenRoutesService);
   private readonly fallbackUrl = '/map-data/rutas.geojson';
-  private map?: Map;
+  private map?: GLMap;
+  private liveVehiclesTimer?: number;
+  private readonly vehicleMarkers = new Map<string, Marker>();
+  private citizenMarker?: Marker;
 
   ngOnInit(): void {
     void this.loadRoutes();
@@ -73,9 +87,20 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.initializeMap();
+    void this.refreshLiveVehicles();
+    this.liveVehiclesTimer = window.setInterval(
+      () => void this.refreshLiveVehicles(),
+      5000,
+    );
   }
 
   ngOnDestroy(): void {
+    if (this.liveVehiclesTimer !== undefined) {
+      window.clearInterval(this.liveVehiclesTimer);
+    }
+    this.vehicleMarkers.forEach((marker) => marker.remove());
+    this.vehicleMarkers.clear();
+    this.citizenMarker?.remove();
     this.map?.remove();
   }
 
@@ -111,6 +136,131 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
         role
       ] ?? role
     );
+  }
+
+  protected async requestEtaForMapPoint(): Promise<void> {
+    const location = this.citizenLocation();
+    if (!location) {
+      this.etaError.set('Haz clic en el mapa o usa tu ubicación para consultar la ETA.');
+      return;
+    }
+    await this.requestEta(location[1], location[0]);
+  }
+
+  protected async requestEtaForCurrentLocation(): Promise<void> {
+    if (!navigator.geolocation) {
+      this.etaError.set('Este navegador no permite consultar la ubicación.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        this.setCitizenLocation(longitude, latitude);
+        void this.requestEta(latitude, longitude);
+      },
+      (error) => {
+        this.etaError.set(
+          error.code === error.PERMISSION_DENIED
+            ? 'Permiso de ubicación denegado. Haz clic en el mapa para elegir un punto.'
+            : 'No fue posible obtener tu ubicación. Intenta de nuevo o elige un punto en el mapa.',
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
+
+  protected etaStatusLabel(status: ETAResponse['status']): string {
+    return {
+      approaching: 'En camino',
+      arriving: 'Está llegando',
+      passed: 'El camión ya pasó',
+      not_started: 'Jornada por iniciar',
+      cancelled: 'Servicio cancelado',
+      scheduled: 'Estimación programada',
+    }[status];
+  }
+
+  protected formatEtaTime(value: string): string {
+    return new Intl.DateTimeFormat('es-CO', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: 'America/Bogota',
+    }).format(new Date(value));
+  }
+
+  protected formatRemainingDistance(value: number | null): string {
+    if (value === null) return 'No disponible';
+    return value >= 1000 ? `${(value / 1000).toFixed(1)} km` : `${Math.round(value)} m`;
+  }
+
+  private async requestEta(latitude: number, longitude: number): Promise<void> {
+    this.etaLoading.set(true);
+    this.etaError.set('');
+    this.eta.set(null);
+    try {
+      const result = await firstValueFrom(
+        this.routeService.getEta(latitude, longitude, this.selectedRouteId() || undefined),
+      );
+      this.eta.set(result);
+    } catch (error) {
+      this.etaError.set(
+        error instanceof HttpErrorResponse && error.status === 404
+          ? 'No hay una ruta activa cercana a este punto. Selecciona una ubicación sobre el recorrido.'
+          : 'No fue posible consultar la ETA. Verifica la conexión con el servicio.',
+      );
+    } finally {
+      this.etaLoading.set(false);
+    }
+  }
+
+  private async refreshLiveVehicles(): Promise<void> {
+    try {
+      const vehicles = await firstValueFrom(this.routeService.listLiveVehicles());
+      this.liveVehicles.set(vehicles);
+      this.liveVehicleError.set('');
+      this.updateVehicleMarkers(vehicles);
+    } catch {
+      this.liveVehicles.set([]);
+      this.liveVehicleError.set('No se pudo consultar la ubicación de los camiones.');
+      this.updateVehicleMarkers([]);
+    }
+  }
+
+  private updateVehicleMarkers(vehicles: readonly LiveVehicle[]): void {
+    const currentPlates = new Set(vehicles.map((vehicle) => vehicle.truck_plate));
+    for (const [plate, marker] of this.vehicleMarkers) {
+      if (!currentPlates.has(plate)) {
+        marker.remove();
+        this.vehicleMarkers.delete(plate);
+      }
+    }
+    if (!this.map) return;
+    for (const vehicle of vehicles) {
+      let marker = this.vehicleMarkers.get(vehicle.truck_plate);
+      if (!marker) {
+        const element = document.createElement('div');
+        element.className = 'vehicle-marker';
+        element.setAttribute('aria-label', `Camión ${vehicle.truck_name}, simulación`);
+        element.textContent = '🚛';
+        marker = new Marker({ element, rotationAlignment: 'map' }).addTo(this.map);
+        this.vehicleMarkers.set(vehicle.truck_plate, marker);
+      }
+      marker.setLngLat([vehicle.longitude, vehicle.latitude]);
+      marker.setRotation(vehicle.heading ?? 0);
+    }
+  }
+
+  private setCitizenLocation(longitude: number, latitude: number): void {
+    this.citizenLocation.set([longitude, latitude]);
+    this.etaError.set('');
+    if (!this.map) return;
+    if (!this.citizenMarker) {
+      const element = document.createElement('div');
+      element.className = 'citizen-location-marker';
+      element.setAttribute('aria-label', 'Ubicación seleccionada');
+      this.citizenMarker = new Marker({ element, color: '#d94b35' }).addTo(this.map);
+    }
+    this.citizenMarker.setLngLat([longitude, latitude]);
   }
 
   private async loadUpcomingSchedules(): Promise<RouteSchedule[]> {
@@ -241,7 +391,7 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
       layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
     };
 
-    this.map = new Map({
+    this.map = new GLMap({
       container: this.mapContainer.nativeElement,
       style,
       center: [-75.6811, 4.5339],
@@ -251,6 +401,10 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.map.once('style.load', () => {
       this.mapReady.set(true);
       this.renderRoutes(this.toFeatureCollection(this.routes()));
+      this.map?.on('click', (event) => {
+        this.setCitizenLocation(event.lngLat.lng, event.lngLat.lat);
+      });
+      this.updateVehicleMarkers(this.liveVehicles());
     });
   }
 

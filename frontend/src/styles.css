@@ -82,3 +82,168 @@ a {
     animation-iteration-count: 1 !important;
   }
 }
+
+.simulation-badge {
+  display: inline-block;
+  margin: 0.65rem 0 0;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #e4c678;
+  border-radius: 999px;
+  background: #fff7dd;
+  color: #694d00;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.eta-card {
+  margin-top: 1.5rem;
+  padding: 1.2rem;
+  border: 1px solid #dedff7;
+  border-radius: 0.9rem;
+  background: #f7f7ff;
+}
+
+.eta-card h2 {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 1rem;
+}
+
+.eta-card > p,
+.live-status p {
+  margin: 0.5rem 0 0;
+  color: #555568;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.eta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.eta-actions button {
+  padding: 0.6rem 0.8rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: var(--color-primary);
+  color: white;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.eta-actions .eta-secondary {
+  background: #e6e6fa;
+  color: var(--color-primary);
+}
+
+.eta-feedback {
+  margin: 0.75rem 0 0;
+  color: #454556;
+  font-size: 0.8rem;
+}
+
+.eta-feedback--error {
+  color: #a32920;
+}
+
+.eta-result {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  color: #454556;
+  font-size: 0.77rem;
+}
+
+.eta-result strong {
+  color: #17613c;
+  font-size: 1rem;
+}
+
+.eta-result small {
+  color: #73560a;
+  font-weight: 800;
+}
+
+.live-status {
+  min-height: 2rem;
+}
+
+.map-legend__vehicle {
+  font-size: 1rem;
+  font-style: normal;
+}
+
+.vehicle-marker {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #17613c;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 30%);
+  font-size: 1.25rem;
+  animation: vehicle-pulse 1.8s ease-in-out infinite;
+}
+
+.citizen-location-marker {
+  width: 1rem;
+  height: 1rem;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: #d94b35;
+  box-shadow: 0 1px 5px rgb(0 0 0 / 40%);
+}
+
+@keyframes vehicle-pulse {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+.gps-token-notice,
+.gps-simulation-note {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #e4c678;
+  border-radius: 0.75rem;
+  background: #fff7dd;
+  color: #694d00;
+  font-size: 0.82rem;
+}
+
+.gps-token-notice code {
+  overflow-wrap: anywhere;
+  padding: 0.65rem;
+  border-radius: 0.4rem;
+  background: white;
+  color: #242436;
+  user-select: all;
+}
+
+.gps-token-notice button {
+  width: fit-content;
+  padding: 0.45rem 0.7rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: #694d00;
+  color: white;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.gps-simulation-note {
+  display: block;
+}
+
+.gps-device-code {
+  align-self: center;
+  color: #454556;
+  font-size: 0.85rem;
+}
