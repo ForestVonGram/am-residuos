@@ -67,6 +67,7 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly eta = signal<ETAResponse | null>(null);
   protected readonly etaError = signal('');
   protected readonly etaLoading = signal(false);
+  protected readonly locationLoading = signal(false);
   protected readonly citizenLocation = signal<[number, number] | null>(null);
   protected readonly selectedRoute = computed(
     () =>
@@ -105,10 +106,6 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   protected selectRoute(routeId: string): void {
-    if (this.selectedRouteId() === routeId) {
-      return;
-    }
-
     this.selectedRouteId.set(routeId);
     this.updateSelectedRouteOnMap(true);
   }
@@ -152,10 +149,18 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
       this.etaError.set('Este navegador no permite consultar la ubicación.');
       return;
     }
+    this.locationLoading.set(true);
+    this.etaError.set('');
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         this.setCitizenLocation(longitude, latitude);
+        this.map?.flyTo({
+          center: [longitude, latitude],
+          zoom: 16,
+          duration: 700,
+        });
+        this.locationLoading.set(false);
         void this.requestEta(latitude, longitude);
       },
       (error) => {
@@ -164,9 +169,27 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
             ? 'Permiso de ubicación denegado. Haz clic en el mapa para elegir un punto.'
             : 'No fue posible obtener tu ubicación. Intenta de nuevo o elige un punto en el mapa.',
         );
+        this.locationLoading.set(false);
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
+  }
+
+  protected centerSelectedRoute(): void {
+    this.updateSelectedRouteOnMap(true);
+  }
+
+  protected centerLiveVehicle(): void {
+    const selectedVehicle =
+      this.liveVehicles().find(
+        (vehicle) => vehicle.route_id === this.selectedRouteId(),
+      ) ?? this.liveVehicles()[0];
+    if (!selectedVehicle) return;
+    this.map?.flyTo({
+      center: [selectedVehicle.longitude, selectedVehicle.latitude],
+      zoom: 16,
+      duration: 700,
+    });
   }
 
   protected etaStatusLabel(status: ETAResponse['status']): string {
@@ -198,9 +221,7 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.etaError.set('');
     this.eta.set(null);
     try {
-      const result = await firstValueFrom(
-        this.routeService.getEta(latitude, longitude, this.selectedRouteId() || undefined),
-      );
+      const result = await firstValueFrom(this.routeService.getEta(latitude, longitude));
       this.eta.set(result);
     } catch (error) {
       this.etaError.set(
@@ -241,24 +262,39 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
         const element = document.createElement('div');
         element.className = 'vehicle-marker';
         element.setAttribute('aria-label', `Camión ${vehicle.truck_name}, simulación`);
-        element.textContent = '🚛';
-        marker = new Marker({ element, rotationAlignment: 'map' }).addTo(this.map);
+        element.dataset['plate'] = vehicle.truck_plate;
+        element.title = `${vehicle.truck_name} · ${vehicle.truck_plate} · GPS simulado`;
+        const icon = document.createElement('span');
+        icon.textContent = '🚛';
+        element.append(icon);
+        marker = new Marker({
+          element,
+          anchor: 'center',
+          rotationAlignment: 'viewport',
+        })
+          .setLngLat([vehicle.longitude, vehicle.latitude])
+          .addTo(this.map);
         this.vehicleMarkers.set(vehicle.truck_plate, marker);
       }
       marker.setLngLat([vehicle.longitude, vehicle.latitude]);
-      marker.setRotation(vehicle.heading ?? 0);
+      marker
+        .getElement()
+        .style.setProperty('--vehicle-heading', `${vehicle.heading ?? 0}deg`);
     }
   }
 
   private setCitizenLocation(longitude: number, latitude: number): void {
     this.citizenLocation.set([longitude, latitude]);
     this.etaError.set('');
+    this.eta.set(null);
     if (!this.map) return;
     if (!this.citizenMarker) {
       const element = document.createElement('div');
       element.className = 'citizen-location-marker';
       element.setAttribute('aria-label', 'Ubicación seleccionada');
-      this.citizenMarker = new Marker({ element, color: '#d94b35' }).addTo(this.map);
+      this.citizenMarker = new Marker({ element, color: '#d94b35' })
+        .setLngLat([longitude, latitude])
+        .addTo(this.map);
     }
     this.citizenMarker.setLngLat([longitude, latitude]);
   }
@@ -396,6 +432,8 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
       style,
       center: [-75.6811, 4.5339],
       zoom: 12,
+      minZoom: 10,
+      maxZoom: 18,
     });
     this.map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
     this.map.once('style.load', () => {
@@ -484,9 +522,9 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
         bounds.extend([coordinate[0], coordinate[1]]);
       });
       this.map.fitBounds(bounds, {
-        padding: 55,
+        padding: 72,
         duration: 700,
-        maxZoom: 15,
+        maxZoom: 16,
       });
     }
   }

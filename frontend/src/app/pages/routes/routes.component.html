@@ -114,13 +114,28 @@
 
       <section class="eta-card" aria-labelledby="eta-title">
         <h2 id="eta-title">¿Cuándo llega el camión a mi ubicación?</h2>
-        <p>Haz clic en el mapa para elegir un punto o comparte tu ubicación.</p>
+        <p>
+          Haz clic en el mapa para elegir un punto o comparte tu ubicación.
+          Tu ubicación solo se usa para calcular la ETA.
+        </p>
         <div class="eta-actions">
           <button type="button" (click)="requestEtaForMapPoint()">Consultar punto del mapa</button>
-          <button type="button" class="eta-secondary" (click)="requestEtaForCurrentLocation()">
-            Usar mi ubicación
+          <button
+            type="button"
+            class="eta-secondary"
+            [disabled]="locationLoading()"
+            (click)="requestEtaForCurrentLocation()"
+          >
+            {{ locationLoading() ? 'Buscando ubicación…' : 'Compartir ubicación' }}
           </button>
         </div>
+        @if (citizenLocation(); as location) {
+          <p class="eta-location" role="status">
+            Punto seleccionado: {{ location[1].toFixed(5) }}, {{ location[0].toFixed(5) }}
+          </p>
+        } @else {
+          <p class="eta-location">Primero selecciona un punto visible en el mapa.</p>
+        }
         @if (etaLoading()) {
           <p class="eta-feedback" role="status">Calculando tiempo estimado…</p>
         }
@@ -167,6 +182,17 @@
         role="region"
         aria-label="Mapa interactivo de rutas de recolección en Armenia"
       ></div>
+
+      <div class="map-actions" aria-label="Controles para centrar el mapa">
+        <button type="button" (click)="centerSelectedRoute()">Centrar ruta</button>
+        <button
+          type="button"
+          [disabled]="liveVehicles().length === 0"
+          (click)="centerLiveVehicle()"
+        >
+          Centrar camión
+        </button>
+      </div>
 
       @if (!mapReady()) {
         <div class="map-loading" aria-live="polite">

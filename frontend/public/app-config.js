@@ -1,3 +1,3 @@
 window.AXM_CONFIG = {
-  adminApiKey: '',
+  adminApiKey: 'change-me-local-only',
 };
