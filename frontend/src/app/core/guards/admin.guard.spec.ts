@@ -1,21 +1,27 @@
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { firstValueFrom, Observable, of } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 import { AdminAuthService } from '../services/admin-auth.service';
 import { adminGuard } from './admin.guard';
 
 describe('adminGuard', () => {
-  it('redirige al login cuando no existe sesión', () => {
+  it('redirige al login cuando no existe sesión', async () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        { provide: AdminAuthService, useValue: { isAuthenticated: () => false } },
+        {
+          provide: AdminAuthService,
+          useValue: { isAuthenticated: () => false, restoreSession: () => of(null) },
+        },
       ],
     });
 
-    const result = TestBed.runInInjectionContext(() =>
-      adminGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+    const result = await firstValueFrom(
+      TestBed.runInInjectionContext(() =>
+        adminGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+      ) as Observable<boolean | UrlTree>,
     );
 
     expect(result instanceof UrlTree).toBe(true);

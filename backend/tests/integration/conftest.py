@@ -19,7 +19,7 @@ from app.models.operational import Personnel, RouteAssignment, Truck
 from app.models.route import CollectionRoute, RouteSchedule
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
-ADMIN_KEY = get_settings().admin_api_key
+ADMIN_KEY = get_settings().admin_api_key.get_secret_value()
 DEVICE_TOKEN = "integration-device-token"
 
 
@@ -65,7 +65,7 @@ async def integration_client(test_database_url: str) -> AsyncIterator[tuple[Asyn
 
 
 async def seed_operation(factory, *, with_device: bool = True):
-    timezone = ZoneInfo("America/Bogota")
+    timezone = ZoneInfo("${TIMEZONE:?Set TIMEZONE in .env}")
     now = datetime.now(timezone)
     service_date = now.date()
     async with factory() as session:

@@ -100,6 +100,7 @@ export class AdminDashboardComponent implements OnInit {
   protected readonly data = signal<AdminOverviewData>(EMPTY_DATA);
   protected readonly loading = signal(true);
   protected readonly connectionError = signal(false);
+  protected readonly logoutError = signal('');
   protected readonly formOpen = signal(false);
   protected readonly editingId = signal<string | null>(null);
   protected readonly saving = signal(false);
@@ -423,8 +424,14 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   protected logout(): void {
-    this.auth.logout();
-    void this.router.navigateByUrl('/admin/login');
+    this.logoutError.set('');
+    this.auth
+      .logout()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => void this.router.navigateByUrl('/admin/login'),
+        error: () => this.logoutError.set('No fue posible cerrar la sesión. Inténtalo de nuevo.'),
+      });
   }
 
   protected roleLabel(role: string): string {

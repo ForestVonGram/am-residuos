@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from seed_routes import seed_routes
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.database.session import AsyncSessionFactory, engine
@@ -82,7 +83,7 @@ async def seed_demo(start_in_minutes: int) -> None:
                     RouteAssignment.route_id == route.id,
                     RouteAssignment.truck_id == truck.id,
                     RouteAssignment.effective_from == service_date,
-                )
+                ).options(selectinload(RouteAssignment.personnel))
             )
             if not assignment:
                 assignment = RouteAssignment(

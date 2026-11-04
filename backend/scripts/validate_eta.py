@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import os
 from datetime import UTC, datetime
 from statistics import mean
 from typing import Any
@@ -18,7 +19,7 @@ async def validate(args: argparse.Namespace) -> None:
             "/api/v1/admin/assignments", headers=admin_headers
         )
         assignments_response.raise_for_status()
-        today = datetime.now(ZoneInfo("America/Bogota")).date().isoformat()
+        today = datetime.now(ZoneInfo(os.getenv("TIMEZONE", "America/Bogota"))).date().isoformat()
         assignments = [
             item
             for item in assignments_response.json()
@@ -117,13 +118,17 @@ async def validate(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Valida ETA con llegada simulada.")
-    parser.add_argument("--api-url", default="http://127.0.0.1:8000")
-    parser.add_argument("--admin-key", required=True)
+    parser.add_argument(
+        "--api-url", default=os.getenv("API_INTERNAL_URL", "http://127.0.0.1:8000")
+    )
+    parser.add_argument("--admin-key", default=os.getenv("ADMIN_API_KEY"))
     parser.add_argument("--route-id")
     parser.add_argument("--speed-kmh", type=float, default=25)
     parser.add_argument("--interval", type=float, default=0.2)
     parser.add_argument("--speedup", type=float, default=10)
     args = parser.parse_args()
+    if not args.admin_key:
+        parser.error("configura ADMIN_API_KEY o proporciona --admin-key")
     if args.speed_kmh <= 0 or args.interval <= 0 or args.speedup <= 0:
         parser.error("--speed-kmh, --interval y --speedup deben ser positivos")
     asyncio.run(validate(args))

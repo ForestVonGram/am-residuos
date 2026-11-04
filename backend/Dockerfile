@@ -15,6 +15,7 @@ COPY backend/scripts ./backend/scripts
 COPY frontend/public/map-data/rutas.geojson ./frontend/public/map-data/rutas.geojson
 WORKDIR /app/backend
 
-EXPOSE 8000
+ARG APP_PORT=8000
+EXPOSE ${APP_PORT}
 
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port \"${APP_PORT}\""]

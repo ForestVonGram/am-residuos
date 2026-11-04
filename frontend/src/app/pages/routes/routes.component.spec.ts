@@ -9,6 +9,10 @@ const mapMocks = vi.hoisted(() => ({
   mapClick: undefined as
     | ((event: { lngLat: { lng: number; lat: number } }) => void)
     | undefined,
+  markerOptions: [] as Array<{
+    anchor?: string;
+    offset?: [number, number];
+  }>,
   markerLocations: [] as Array<[number, number]>,
   markerLabels: [] as string[],
 }));
@@ -17,8 +21,16 @@ vi.mock('maplibre-gl', () => {
   class MockMarker {
     private readonly element: HTMLElement;
 
-    constructor(options: { element: HTMLElement }) {
+    constructor(options: {
+      element: HTMLElement;
+      anchor?: string;
+      offset?: [number, number];
+    }) {
       this.element = options.element;
+      mapMocks.markerOptions.push({
+        anchor: options.anchor,
+        offset: options.offset,
+      });
       mapMocks.markerLabels.push(this.element.getAttribute('aria-label') ?? '');
     }
 
@@ -122,6 +134,7 @@ describe('RoutesComponent', () => {
   beforeEach(async () => {
     mapMocks.fitBounds.mockClear();
     mapMocks.flyTo.mockClear();
+    mapMocks.markerOptions.length = 0;
     mapMocks.markerLocations.length = 0;
     mapMocks.markerLabels.length = 0;
     mapMocks.mapClick = undefined;
@@ -212,6 +225,33 @@ describe('RoutesComponent', () => {
     expect(mapMocks.markerLocations).toContainEqual([-75.68, 4.54]);
   });
 
+  it('no muestra camiones con una posición GPS desactualizada', async () => {
+    service.listLiveVehicles = vi.fn(() =>
+      of([
+        {
+          truck_plate: 'AXM-001',
+          truck_name: 'Camión demo',
+          latitude: 4.53,
+          longitude: -75.69,
+          speed_kmh: 20,
+          heading: 90,
+          recorded_at: '2026-11-02T22:00:00Z',
+          stale: true,
+          route_id: 'route-1',
+          simulated: true,
+        },
+      ]),
+    );
+    fixture = TestBed.createComponent(RoutesComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(mapMocks.markerLabels).not.toContain('Camión Camión demo, simulación');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'No hay camiones con ubicación GPS reciente en este momento.',
+    );
+  });
+
   it('limpia el polling al destruir la página', async () => {
     const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
     fixture = TestBed.createComponent(RoutesComponent);
@@ -253,6 +293,9 @@ describe('RoutesComponent', () => {
 
     expect(service.getEta).toHaveBeenCalledWith(4.53, -75.68);
     expect(mapMocks.markerLocations).toContainEqual([-75.68, 4.53]);
+    expect(mapMocks.markerOptions).toContainEqual(
+      expect.objectContaining({ anchor: 'center', offset: [0, 0] }),
+    );
   });
 
   it('centra el mapa y muestra un marcador al compartir ubicación', async () => {

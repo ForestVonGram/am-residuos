@@ -2,9 +2,9 @@
 
 ## Integración con Docker Compose
 
-Desde la raíz del repositorio, `docker compose up --build -d` construye y ejecuta la interfaz junto con la API y PostgreSQL. Abre `http://localhost:4200`; Nginx sirve Angular y reenvía `/api` al backend.
+Desde la raíz del repositorio, `docker compose up --build -d` construye y ejecuta la interfaz junto con la API y PostgreSQL. Abre el puerto definido por `FRONTEND_HOST_PORT` en `.env` (4200 por defecto); Nginx sirve Angular y reenvía `/api` al backend configurado en `API_INTERNAL_URL`.
 
-La clave `ADMIN_API_KEY` del `.env` se incorpora en el bundle del navegador para la demo. No la uses como secreto ni como autenticación de producción.
+El frontend no contiene credenciales ni claves API. El inicio de sesión se valida en el backend, que entrega una cookie de sesión `HttpOnly`; `ADMIN_API_KEY` se mantiene exclusivamente en los servicios backend y simulador.
 
 ## Desarrollo local
 
@@ -15,10 +15,10 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 To start a local development server, run:
 
 ```bash
-ng serve
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+The start script prepares the MapLibre worker asset before launching Angular. Once the server is running, open `http://localhost:4200/`; the application reloads whenever you modify source files.
 
 ## Code scaffolding
 
@@ -39,7 +39,7 @@ ng generate --help
 To build the project run:
 
 ```bash
-ng build
+npm run build
 ```
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.

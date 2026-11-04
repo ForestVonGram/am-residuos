@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import math
+import os
 import random
 from datetime import UTC, datetime
 from typing import Any
@@ -10,6 +11,12 @@ from typing import Any
 import httpx
 
 EARTH_RADIUS_M = 6_371_008.8
+
+
+def _default_api_url() -> str:
+    return os.getenv("API_INTERNAL_URL") or (
+        f"http://127.0.0.1:{os.getenv('APP_PORT', '8000')}"
+    )
 
 
 def haversine_m(start: tuple[float, float], end: tuple[float, float]) -> float:
@@ -78,7 +85,9 @@ async def load_assignments(
     response.raise_for_status()
     from zoneinfo import ZoneInfo
 
-    today = datetime.now(ZoneInfo("America/Bogota")).date().isoformat()
+    today = datetime.now(
+        ZoneInfo(os.getenv("TIMEZONE", "America/Bogota"))
+    ).date().isoformat()
     assignments = [
         row
         for row in response.json()
@@ -198,8 +207,8 @@ async def simulate(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Simula vehículos sobre las rutas demo.")
-    parser.add_argument("--api-url", default="http://127.0.0.1:8000")
-    parser.add_argument("--admin-key", required=True)
+    parser.add_argument("--api-url", default=_default_api_url())
+    parser.add_argument("--admin-key", default=os.getenv("ADMIN_API_KEY"))
     parser.add_argument("--device-token")
     parser.add_argument("--route-id")
     parser.add_argument("--speed-kmh", type=float, default=25)
@@ -211,6 +220,8 @@ def main() -> None:
     parser.add_argument("--offline-after", type=int)
     parser.add_argument("--loop", action="store_true")
     args = parser.parse_args()
+    if not args.admin_key:
+        parser.error("configura ADMIN_API_KEY o proporciona --admin-key")
     if args.speed_kmh <= 0 or args.interval <= 0 or args.speedup <= 0:
         parser.error("velocidad, intervalo y speedup deben ser positivos")
     if not 0 <= args.dropout_prob <= 1:

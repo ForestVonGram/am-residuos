@@ -1,8 +1,10 @@
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from app.api.dependencies import get_admin_service, get_citizen_service, get_gps_service
+from app.core.config import Settings
 from app.main import app
 from app.schemas.citizen import RouteSummary
 
@@ -73,18 +75,119 @@ def test_admin_routes_require_key() -> None:
     assert response.json()["detail"] == "Credencial administrativa invalida"
 
 
-def test_admin_routes_accept_configured_key() -> None:
+def test_admin_routes_accept_configured_key(monkeypatch) -> None:
+    settings = Settings(
+        _env_file=None,
+        admin_api_key=SecretStr("test-api-key-with-at-least-thirty-two-characters"),
+        admin_username="admin",
+        admin_password=SecretStr("test-password"),
+        admin_session_secret=SecretStr("test-session-secret-with-at-least-thirty-two-chars"),
+    )
+    monkeypatch.setattr("app.core.security.get_settings", lambda: settings)
     app.dependency_overrides[get_admin_service] = lambda: FakeAdminService()
     try:
         with TestClient(app) as client:
             response = client.get(
                 "/api/v1/admin/trucks",
-                headers={"X-Admin-Key": "change-me-local-only"},
+                headers={
+                    "X-Admin-Key": "test-api-key-with-at-least-thirty-two-characters"
+                },
             )
         assert response.status_code == 200
         assert response.json() == []
     finally:
         app.dependency_overrides.clear()
+
+
+def test_admin_login_issues_http_only_session_cookie(monkeypatch) -> None:
+    settings = Settings(
+        _env_file=None,
+        admin_api_key=SecretStr("test-api-key-with-at-least-thirty-two-characters"),
+        admin_username="admin",
+        admin_password=SecretStr("test-password-with-sufficient-length"),
+        admin_session_secret=SecretStr("test-session-secret-with-at-least-thirty-two-chars"),
+    )
+    monkeypatch.setattr("app.api.routes.admin_auth.get_settings", lambda: settings)
+    monkeypatch.setattr("app.core.security.get_settings", lambda: settings)
+    app.dependency_overrides[get_admin_service] = lambda: FakeAdminService()
+    try:
+        with TestClient(app) as client:
+            login = client.post(
+                "/api/v1/admin/auth/login",
+                json={
+                    "username": "admin",
+                    "password": "test-password-with-sufficient-length",
+                },
+            )
+            response = client.get("/api/v1/admin/trucks")
+            logout = client.post("/api/v1/admin/auth/logout")
+            rejected_after_logout = client.get("/api/v1/admin/trucks")
+
+        assert login.status_code == 200
+        assert login.json() == {"username": "admin"}
+        cookie = login.headers["set-cookie"].lower()
+        assert "httponly" in cookie
+        assert "samesite=strict" in cookie
+        assert response.status_code == 200
+        assert response.json() == []
+        assert logout.status_code == 204
+        assert rejected_after_logout.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_admin_login_rejects_invalid_password(monkeypatch) -> None:
+    settings = Settings(
+        _env_file=None,
+        admin_username="admin",
+        admin_password=SecretStr("test-password-with-sufficient-length"),
+        admin_session_secret=SecretStr("test-session-secret-with-at-least-thirty-two-chars"),
+    )
+    monkeypatch.setattr("app.api.routes.admin_auth.get_settings", lambda: settings)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/admin/auth/login",
+            json={"username": "admin", "password": "wrong-password"},
+        )
+    assert response.status_code == 401
+
+
+def test_admin_login_reports_missing_auth_configuration(monkeypatch) -> None:
+    settings = Settings(
+        _env_file=None,
+        admin_api_key=SecretStr(""),
+        admin_username="",
+        admin_password=SecretStr(""),
+        admin_session_secret=SecretStr(""),
+    )
+    monkeypatch.setattr("app.api.routes.admin_auth.get_settings", lambda: settings)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/admin/auth/login",
+            json={"username": "admin", "password": "password"},
+        )
+    assert response.status_code == 503
+
+
+def test_admin_login_rejects_example_placeholders(monkeypatch) -> None:
+    settings = Settings(
+        _env_file=None,
+        admin_username="admin",
+        admin_password=SecretStr("replace-with-a-strong-password"),
+        admin_session_secret=SecretStr(
+            "replace-with-a-separate-64-character-random-secret"
+        ),
+    )
+    monkeypatch.setattr("app.api.routes.admin_auth.get_settings", lambda: settings)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/admin/auth/login",
+            json={
+                "username": "admin",
+                "password": "replace-with-a-strong-password",
+            },
+        )
+    assert response.status_code == 503
 
 
 def test_gps_ingestion_requires_device_token() -> None:

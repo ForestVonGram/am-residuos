@@ -15,21 +15,21 @@
 
     <div class="admin-card__body">
       <div class="login-heading">
-        <p>Acceso de prueba</p>
+        <p>Acceso administrativo</p>
         <h1 id="admin-login-title">Iniciar sesión</h1>
         <span>
-          Este acceso es temporal y funciona únicamente en el navegador.
+          Ingresa tus credenciales administrativas.
         </span>
       </div>
 
       <form (ngSubmit)="submit()">
-        <label for="admin-email">Usuario</label>
+        <label for="admin-username">Usuario</label>
         <input
-          id="admin-email"
-          name="email"
-          type="email"
+          id="admin-username"
+          name="username"
+          type="text"
           autocomplete="username"
-          [(ngModel)]="email"
+          [(ngModel)]="username"
           required
         />
 
@@ -50,14 +50,6 @@
         <button class="login-button" type="submit">Ingresar al panel</button>
       </form>
 
-      <aside class="demo-access" aria-label="Credenciales de prueba">
-        <div>
-          <strong>Credenciales temporales</strong>
-          <span>{{ auth.demoEmail }}</span>
-          <span>{{ auth.demoPassword }}</span>
-        </div>
-        <button type="button" (click)="fillDemoCredentials()">Usar credenciales</button>
-      </aside>
     </div>
   </section>
 </main>

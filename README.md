@@ -6,7 +6,7 @@ MVP universitario para consultar rutas y horarios de recolección en Armenia, Qu
 
 Requisito: Docker Compose.
 
-1. Copia `.env.example` como `.env` si todavía no existe y configura `ADMIN_API_KEY` para tu demo.
+1. Copia `.env.example` como `.env` si todavía no existe (si ya tienes `.env`, agrega las variables nuevas desde el ejemplo). `DATABASE_URL` se construye automáticamente desde `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_HOST` y `POSTGRES_CONTAINER_PORT`; para Compose el host es `database`. Reemplaza los valores `replace-with-*` por secretos únicos; genera cada valor aleatorio con `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Usa una `ADMIN_PASSWORD` de al menos 12 caracteres y secretos separados de al menos 32 caracteres para `ADMIN_API_KEY` y `ADMIN_SESSION_SECRET`. No publiques `.env`.
 2. Ejecuta `docker compose up --build -d` desde la raíz. Se inician PostgreSQL, backend y frontend; el backend aplica las migraciones al arrancar.
 3. Carga rutas, camiones, asignaciones y dispositivos demo:
 
@@ -14,7 +14,7 @@ Requisito: Docker Compose.
    docker compose exec backend python scripts/seed_demo.py --start-in-minutes 2
    ```
 
-4. Abre `http://localhost:4200`. La interfaz reenvía las llamadas `/api` al backend; la API y su documentación están en `http://localhost:8000` y `http://localhost:8000/docs`.
+4. Abre el puerto definido por `FRONTEND_HOST_PORT` (por defecto `http://localhost:4200`). La interfaz reenvía las llamadas `/api` al backend; la API y su documentación están disponibles en `BACKEND_HOST_PORT` (por defecto `http://localhost:8000`).
 5. Para iniciar la simulación continua de GPS sobre las rutas con asignaciones activas:
 
    ```sh
@@ -27,7 +27,9 @@ El simulador aprovisiona o regenera las credenciales de dispositivo vía API adm
 
 En el panel se pueden crear camiones desde **Gestionar camiones**, asociarlos a rutas desde **Gestionar asignaciones** y consultar los dispositivos simulados en **Dispositivos GPS**. El simulador requiere asignaciones activas; para camiones nuevos, asígnalos primero a una ruta vigente.
 
-La clave admin se inyecta en el bundle del frontend durante la construcción y queda visible para cualquier usuario del navegador. La clave demo y el login simulado son solo para desarrollo; no los uses como mecanismo de autenticación de producción.
+El panel valida `ADMIN_USERNAME` y `ADMIN_PASSWORD` en el backend y usa una cookie de sesión `HttpOnly`; `ADMIN_API_KEY` no se envía al navegador y se reserva para scripts internos. Los puertos publicados, el origen CORS y la URL interna de API se configuran en `.env`. En producción habilita HTTPS y `ADMIN_COOKIE_SECURE=true`; usa un gestor de secretos en lugar de un archivo `.env`.
+
+Si una clave real se usó con versiones anteriores, rótala: quedó expuesta en bundles del navegador y puede permanecer en cachés o historial de Git.
 
 ## Pruebas
 
@@ -38,6 +40,6 @@ python -m pytest
 python -m ruff check app tests scripts
 ```
 
-El frontend también puede ejecutarse fuera de Docker con `cd frontend`, `npm ci` y `npm start`; en ese caso se usa el proxy local y `frontend/public/app-config.js`.
+El frontend también puede ejecutarse fuera de Docker con `cd frontend`, `npm ci` y `npm start`; en ese caso se usa el proxy local de `frontend/proxy.conf.js`, que lee `API_LOCAL_URL` desde el `.env` raíz.
 
 Las pruebas PostgreSQL se ejecutan por separado y requieren una base de pruebas dedicada; consulta [docs/PLAN_PRUEBAS.md](./docs/PLAN_PRUEBAS.md). La guía de incidencias está en [docs/INCIDENCIAS.md](./docs/INCIDENCIAS.md).

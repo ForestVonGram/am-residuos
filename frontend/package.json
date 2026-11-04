@@ -3,8 +3,11 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "prestart": "node scripts/copy-maplibre-worker.cjs",
     "start": "ng serve",
+    "prebuild": "node scripts/copy-maplibre-worker.cjs",
     "build": "ng build",
+    "prewatch": "node scripts/copy-maplibre-worker.cjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

@@ -1,8 +1,7 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, forkJoin } from 'rxjs';
 import { RouteSummary } from './citizen-routes.service';
-import { AdminAuthService } from './admin-auth.service';
 
 export interface PersonnelRecord {
   id: string;
@@ -114,14 +113,9 @@ export type AdjustmentWrite = Omit<AdjustmentRecord, 'id'>;
 @Injectable({ providedIn: 'root' })
 export class AdminApiService {
   private readonly http = inject(HttpClient);
-  private readonly auth = inject(AdminAuthService);
   private readonly adminUrl = '/api/v1/admin';
 
-  private get options() {
-    return {
-      headers: new HttpHeaders({ 'X-Admin-Key': this.auth.adminApiKey }),
-    };
-  }
+  private readonly options = {};
 
   loadOverview(): Observable<AdminOverviewData> {
     return forkJoin({

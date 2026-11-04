@@ -17,6 +17,10 @@
       <button class="logout-button" type="button" (click)="logout()">Cerrar sesión</button>
     </header>
 
+    @if (logoutError()) {
+      <p class="form-error" role="alert">{{ logoutError() }}</p>
+    }
+
     <div class="admin-content">
       @if (activeSection() === 'overview') {
         <div class="welcome">
@@ -130,7 +134,7 @@
           <aside class="connection-alert connection-alert--section" role="status">
             <div>
               <strong>No fue posible consultar la API</strong
-              ><span>Inicia el backend en el puerto 8000 y vuelve a intentarlo.</span>
+              ><span>Inicia el backend y vuelve a intentarlo.</span>
             </div>
             <button type="button" (click)="loadData()">Reintentar</button>
           </aside>

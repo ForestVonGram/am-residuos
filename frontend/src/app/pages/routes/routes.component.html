@@ -168,7 +168,7 @@
         @if (liveVehicleError()) {
           <p role="status">{{ liveVehicleError() }}</p>
         } @else if (liveVehicles().length === 0) {
-          <p>No hay camiones activos con señal GPS en este momento.</p>
+          <p>No hay camiones con ubicación GPS reciente en este momento.</p>
         } @else {
           <p>{{ liveVehicles().length }} camión(es) activos · actualización cada 5 s</p>
         }

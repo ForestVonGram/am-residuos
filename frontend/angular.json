@@ -23,11 +23,6 @@
               {
                 "glob": "**/*",
                 "input": "public"
-              },
-              {
-                "glob": "maplibre-gl-worker.mjs",
-                "input": "node_modules/maplibre-gl/dist",
-                "output": "/"
               }
             ],
             "styles": [
@@ -61,7 +56,7 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
-            "proxyConfig": "proxy.conf.json"
+            "proxyConfig": "proxy.conf.js"
           },
           "configurations": {
             "production": {

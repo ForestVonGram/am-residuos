@@ -237,9 +237,16 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
   private async refreshLiveVehicles(): Promise<void> {
     try {
       const vehicles = await firstValueFrom(this.routeService.listLiveVehicles());
-      this.liveVehicles.set(vehicles);
+      const recentVehicles = [
+        ...new Map(
+          vehicles
+            .filter((vehicle) => !vehicle.stale)
+            .map((vehicle) => [vehicle.truck_plate, vehicle]),
+        ).values(),
+      ];
+      this.liveVehicles.set(recentVehicles);
       this.liveVehicleError.set('');
-      this.updateVehicleMarkers(vehicles);
+      this.updateVehicleMarkers(recentVehicles);
     } catch {
       this.liveVehicles.set([]);
       this.liveVehicleError.set('No se pudo consultar la ubicación de los camiones.');
@@ -292,7 +299,12 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
       const element = document.createElement('div');
       element.className = 'citizen-location-marker';
       element.setAttribute('aria-label', 'Ubicación seleccionada');
-      this.citizenMarker = new Marker({ element, color: '#d94b35' })
+      this.citizenMarker = new Marker({
+        element,
+        anchor: 'center',
+        offset: [0, 0],
+        color: '#d94b35',
+      })
         .setLngLat([longitude, latitude])
         .addTo(this.map);
     }
@@ -381,8 +393,29 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
     local: boolean,
     details?: Array<{ id: string; description: string | null }>,
   ): void {
+    const now = new Date();
+    const currentDate = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'America/Bogota',
+    }).format(now);
+    const currentTime = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+      timeZone: 'America/Bogota',
+    }).format(now);
     const routes = collection.features.map((feature) => {
       const properties = feature.properties;
+      const upcomingSchedules = schedules.filter(
+        (schedule) =>
+          schedule.route_id === properties.id &&
+          (schedule.service_date > currentDate ||
+            (schedule.service_date === currentDate &&
+              schedule.expected_end_time > currentTime)),
+      );
       return {
         ...properties,
         description:
@@ -390,11 +423,8 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
           null,
         geometry: feature.geometry,
         schedule:
-          schedules.find(
-            (schedule) =>
-              schedule.route_id === properties.id && !schedule.cancelled,
-          ) ??
-          schedules.find((schedule) => schedule.route_id === properties.id) ??
+          upcomingSchedules.find((schedule) => !schedule.cancelled) ??
+          upcomingSchedules[0] ??
           null,
       };
     });
@@ -412,7 +442,7 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    setWorkerUrl('/maplibre-gl-worker.mjs');
+    setWorkerUrl('/maplibre-gl-worker.js');
 
     const style: StyleSpecification = {
       version: 8,

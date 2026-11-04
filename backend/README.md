@@ -14,12 +14,13 @@ La telemetría se marca como simulada en la respuesta pública (`simulated: true
 
 ## Desarrollo local
 
-Requisitos: Python 3.12 o superior y PostgreSQL 14 o superior. Copia `backend/.env.example` a `backend/.env` y ajusta las variables según tu PostgreSQL local. Desde la raíz, el camino recomendado es:
+Requisitos: Python 3.12 o superior y PostgreSQL 14 o superior. En Docker Compose, configura el `.env` raíz con `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` y `POSTGRES_HOST=database`; `DATABASE_URL` se arma automáticamente con esos valores. Para ejecutar el backend directamente en el host, copia `backend/.env.example` a `backend/.env` y usa `POSTGRES_HOST=localhost`. En ambos casos configura las credenciales administrativas y reemplaza los valores de ejemplo por secretos aleatorios. El camino recomendado es:
 
 ```sh
 docker compose up --build -d backend
 docker compose exec backend python scripts/seed_demo.py
-docker compose exec backend python scripts/simulate_gps.py --admin-key "change-me-local-only" --loop
+docker compose --profile gps-simulation up --build -d gps-simulator
+docker compose logs -f gps-simulator
 ```
 
 Compose proporciona el servicio `database`; el contenedor backend ejecuta `alembic upgrade head` antes de iniciar Uvicorn y contiene `scripts/` y el GeoJSON usado por el seed.
@@ -32,12 +33,10 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 alembic upgrade head
 python scripts/seed_demo.py
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port "${APP_PORT:-8000}"
 ```
 
-La configuración de ejemplo y `change-me-local-only` son exclusivamente para desarrollo. La clave admin enviada desde `frontend/public/app-config.js` queda visible para cualquier usuario del navegador y no constituye una frontera de seguridad de producción.
-
-Los comandos de ejemplo usan la clave demo predeterminada; sustitúyela por el valor local de `ADMIN_API_KEY` si lo cambias. El login Angular también es solo una simulación del MVP y no reemplaza autenticación real del servidor.
+El login administrativo compara `ADMIN_USERNAME` y `ADMIN_PASSWORD` en el backend y crea una cookie firmada, `HttpOnly`, `SameSite=Strict` y con expiración configurable mediante `ADMIN_SESSION_TTL_SECONDS`. La contraseña debe tener al menos 12 caracteres y `ADMIN_SESSION_SECRET` al menos 32. `ADMIN_API_KEY` (mínimo 32 caracteres) permanece solo en backend y se usa para scripts de confianza; nunca se incorpora al bundle Angular. En producción configura `APP_ENV=production` y `ADMIN_COOKIE_SECURE=true`, sirve la aplicación por HTTPS y usa un gestor de secretos.
 
 ## Endpoints principales
 
@@ -52,7 +51,7 @@ Los comandos de ejemplo usan la clave demo predeterminada; sustitúyela por el v
 
 ### Administración
 
-Usan `X-Admin-Key` bajo `/api/v1/admin`: personal, camiones, horarios, asignaciones, ajustes de servicio y `/gps-devices`. Al crear o regenerar un dispositivo, el token en claro se devuelve una sola vez.
+`POST /api/v1/admin/auth/login` recibe usuario y contraseña configurados en el backend; la sesión se conserva en una cookie `HttpOnly`. `/api/v1/admin/auth/session` comprueba la sesión y `/api/v1/admin/auth/logout` la cierra. Los endpoints administrativos aceptan la cookie web o `X-Admin-Key` para scripts de confianza. Al crear o regenerar un dispositivo, el token en claro se devuelve una sola vez.
 
 ### Ingesta GPS
 
@@ -62,7 +61,7 @@ Usan `X-Admin-Key` bajo `/api/v1/admin`: personal, camiones, horarios, asignacio
 
 `scripts/seed_demo.py` carga de forma idempotente las rutas GeoJSON, dos camiones, cuadrillas, horarios recurrentes y dispositivos. Imprime los tokens demo; volver a sembrar rota esos tokens.
 
-`scripts/simulate_gps.py --admin-key <clave>` lee asignaciones activas, crea o regenera dispositivos vía API y envía posiciones con ruido de 3–5 m. Opciones: `--speed-kmh`, `--interval`, `--speedup`, `--dropout-prob`, `--pause-at`, `--pause-seconds`, `--offline-after` y `--loop`. `scripts/validate_eta.py` recorre una ruta acelerada y reporta el error medio absoluto entre las ETA observadas y la llegada simulada.
+`scripts/simulate_gps.py --admin-key <clave>` lee asignaciones activas, crea o regenera dispositivos vía API y envía posiciones con ruido de 3–5 m. Usa `API_INTERNAL_URL` si está configurada; si no, se conecta a `127.0.0.1` usando `APP_PORT` (o el puerto `8000` por defecto). La zona horaria usa `TIMEZONE` o `America/Bogota`. Opciones: `--speed-kmh`, `--interval`, `--speedup`, `--dropout-prob`, `--pause-at`, `--pause-seconds`, `--offline-after` y `--loop`. `scripts/validate_eta.py` recorre una ruta acelerada y reporta el error medio absoluto entre las ETA observadas y la llegada simulada.
 
 ## Pruebas
 

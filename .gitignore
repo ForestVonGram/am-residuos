@@ -15,6 +15,7 @@ dist/
 .angular/
 coverage/
 frontend/.env
+frontend/public/maplibre-gl-worker.js
 
 # Editores y sistema
 .idea/

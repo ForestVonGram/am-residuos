@@ -1,59 +1,54 @@
-import { Injectable, computed, signal } from '@angular/core';
-
-declare global {
-  interface Window {
-    AXM_CONFIG?: {
-      adminApiKey?: string;
-    };
-  }
-}
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
 
 export interface AdminUser {
   name: string;
   email: string;
 }
 
+interface AdminSessionResponse {
+  username: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminAuthService {
-  readonly demoEmail = 'admin@axmresiduos.com';
-  readonly demoPassword = 'AdminAXM2026!';
-
-  private readonly sessionKey = 'axm-demo-admin-session';
-  private readonly userState = signal<AdminUser | null>(this.restoreSession());
+  private readonly http = inject(HttpClient);
+  private readonly authUrl = '/api/v1/admin/auth';
+  private readonly userState = signal<AdminUser | null>(null);
 
   readonly user = this.userState.asReadonly();
   readonly isAuthenticated = computed(() => this.userState() !== null);
 
-  get adminApiKey(): string {
-    return window.AXM_CONFIG?.adminApiKey ?? '';
+  login(username: string, password: string): Observable<AdminUser> {
+    return this.http
+      .post<AdminSessionResponse>(`${this.authUrl}/login`, { username, password })
+      .pipe(map((session) => this.setUser(session.username)));
   }
 
-  login(email: string, password: string): boolean {
-    const isValid =
-      email.trim().toLowerCase() === this.demoEmail &&
-      password === this.demoPassword;
+  restoreSession(): Observable<AdminUser | null> {
+    if (this.userState()) return of(this.userState());
+    return this.http.get<AdminSessionResponse>(`${this.authUrl}/session`).pipe(
+      map((session) => this.setUser(session.username)),
+      catchError((error: HttpErrorResponse) => {
+        if (error.status === 401) {
+          this.userState.set(null);
+          return of(null);
+        }
+        return throwError(() => error);
+      }),
+    );
+  }
 
-    if (!isValid) return false;
+  logout(): Observable<void> {
+    return this.http.post<void>(`${this.authUrl}/logout`, {}).pipe(
+      tap(() => this.userState.set(null)),
+    );
+  }
 
-    const user: AdminUser = { name: 'ADMIN', email: this.demoEmail };
-    sessionStorage.setItem(this.sessionKey, JSON.stringify(user));
+  private setUser(username: string): AdminUser {
+    const user = { name: 'ADMIN', email: username };
     this.userState.set(user);
-    return true;
-  }
-
-  logout(): void {
-    sessionStorage.removeItem(this.sessionKey);
-    this.userState.set(null);
-  }
-
-  private restoreSession(): AdminUser | null {
-    const value = sessionStorage.getItem(this.sessionKey);
-    if (!value) return null;
-    try {
-      return JSON.parse(value) as AdminUser;
-    } catch {
-      sessionStorage.removeItem(this.sessionKey);
-      return null;
-    }
+    return user;
   }
 }

@@ -1,7 +1,7 @@
 import pytest
 
 from app.services.geo import haversine_m
-from scripts.simulate_gps import add_gps_noise, interpolate_route
+from scripts.simulate_gps import _default_api_url, add_gps_noise, interpolate_route
 
 ROUTE = [[-75.69, 4.53], [-75.68, 4.53]]
 
@@ -26,3 +26,20 @@ def test_gps_noise_is_bounded_to_five_metres() -> None:
 
 def test_interpolation_supports_single_point_route() -> None:
     assert interpolate_route([[-75.69, 4.53]], 0.7) == (4.53, -75.69, 0.0)
+
+
+def test_default_api_url_uses_backend_container_port_when_internal_url_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("API_INTERNAL_URL", raising=False)
+    monkeypatch.setenv("APP_PORT", "8080")
+
+    assert _default_api_url() == "http://127.0.0.1:8080"
+
+
+def test_default_api_url_prefers_configured_internal_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("API_INTERNAL_URL", "http://backend:8000")
+
+    assert _default_api_url() == "http://backend:8000"
