@@ -80,7 +80,6 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
   private map?: GLMap;
   private liveVehiclesTimer?: number;
   private readonly vehicleMarkers = new Map<string, Marker>();
-  private citizenMarker?: Marker;
 
   ngOnInit(): void {
     void this.loadRoutes();
@@ -101,7 +100,6 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     this.vehicleMarkers.forEach((marker) => marker.remove());
     this.vehicleMarkers.clear();
-    this.citizenMarker?.remove();
     this.map?.remove();
   }
 
@@ -294,21 +292,28 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.citizenLocation.set([longitude, latitude]);
     this.etaError.set('');
     this.eta.set(null);
-    if (!this.map) return;
-    if (!this.citizenMarker) {
-      const element = document.createElement('div');
-      element.className = 'citizen-location-marker';
-      element.setAttribute('aria-label', 'Ubicación seleccionada');
-      this.citizenMarker = new Marker({
-        element,
-        anchor: 'center',
-        offset: [0, 0],
-        color: '#d94b35',
-      })
-        .setLngLat([longitude, latitude])
-        .addTo(this.map);
-    }
-    this.citizenMarker.setLngLat([longitude, latitude]);
+    this.updateCitizenLocationOnMap();
+  }
+
+  private updateCitizenLocationOnMap(): void {
+    const source = this.map?.getSource('citizen-location') as
+      | GeoJSONSource
+      | undefined;
+    if (!source) return;
+    const location = this.citizenLocation();
+    const data: FeatureCollection<Point> = {
+      type: 'FeatureCollection',
+      features: location
+        ? [
+            {
+              type: 'Feature',
+              properties: {},
+              geometry: { type: 'Point', coordinates: location },
+            },
+          ]
+        : [],
+    };
+    source.setData(data);
   }
 
   private async loadUpcomingSchedules(): Promise<RouteSchedule[]> {
@@ -469,6 +474,25 @@ export class RoutesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.map.once('style.load', () => {
       this.mapReady.set(true);
       this.renderRoutes(this.toFeatureCollection(this.routes()));
+      this.map?.addSource('citizen-location', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: [],
+        },
+      });
+      this.map?.addLayer({
+        id: 'citizen-location',
+        type: 'circle',
+        source: 'citizen-location',
+        paint: {
+          'circle-radius': 7,
+          'circle-color': '#d94b35',
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 3,
+        },
+      });
+      this.updateCitizenLocationOnMap();
       this.map?.on('click', (event) => {
         this.setCitizenLocation(event.lngLat.lng, event.lngLat.lat);
       });

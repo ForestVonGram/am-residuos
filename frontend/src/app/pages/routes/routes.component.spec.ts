@@ -15,6 +15,7 @@ const mapMocks = vi.hoisted(() => ({
   }>,
   markerLocations: [] as Array<[number, number]>,
   markerLabels: [] as string[],
+  citizenLocationData: [] as unknown[],
 }));
 
 vi.mock('maplibre-gl', () => {
@@ -60,7 +61,11 @@ vi.mock('maplibre-gl', () => {
     }
 
     addControl() {}
-    addSource() {}
+    addSource(id: string, source: { data?: unknown }) {
+      if (id === 'citizen-location') {
+        mapMocks.citizenLocationData.push(source.data);
+      }
+    }
     addLayer() {}
     on(
       event: string,
@@ -70,8 +75,14 @@ vi.mock('maplibre-gl', () => {
         mapMocks.mapClick = handler;
       }
     }
-    getSource() {
-      return undefined;
+    getSource(id: string) {
+      return id === 'citizen-location'
+        ? {
+            setData(data: unknown) {
+              mapMocks.citizenLocationData.push(data);
+            },
+          }
+        : undefined;
     }
     setPaintProperty() {}
     fitBounds(...args: unknown[]) {
@@ -137,6 +148,7 @@ describe('RoutesComponent', () => {
     mapMocks.markerOptions.length = 0;
     mapMocks.markerLocations.length = 0;
     mapMocks.markerLabels.length = 0;
+    mapMocks.citizenLocationData.length = 0;
     mapMocks.mapClick = undefined;
     service = {
       listRoutes: vi.fn(() => of([routeDetail])),
@@ -279,7 +291,7 @@ describe('RoutesComponent', () => {
     expect(mapMocks.fitBounds.mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
-  it('consulta el punto elegido en el mapa y deja visible su marcador', async () => {
+  it('muestra en la coordenada exacta el punto elegido en el mapa', async () => {
     fixture = TestBed.createComponent(RoutesComponent);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -292,13 +304,18 @@ describe('RoutesComponent', () => {
     consultButton?.click();
 
     expect(service.getEta).toHaveBeenCalledWith(4.53, -75.68);
-    expect(mapMocks.markerLocations).toContainEqual([-75.68, 4.53]);
-    expect(mapMocks.markerOptions).toContainEqual(
-      expect.objectContaining({ anchor: 'center', offset: [0, 0] }),
+    expect(mapMocks.citizenLocationData.at(-1)).toEqual(
+      expect.objectContaining({
+        features: [
+          expect.objectContaining({
+            geometry: { type: 'Point', coordinates: [-75.68, 4.53] },
+          }),
+        ],
+      }),
     );
   });
 
-  it('centra el mapa y muestra un marcador al compartir ubicación', async () => {
+  it('centra el mapa y actualiza la capa con la ubicación compartida', async () => {
     Object.defineProperty(navigator, 'geolocation', {
       configurable: true,
       value: {
@@ -322,6 +339,14 @@ describe('RoutesComponent', () => {
       zoom: 16,
       duration: 700,
     });
-    expect(mapMocks.markerLocations).toContainEqual([-75.67, 4.54]);
+    expect(mapMocks.citizenLocationData.at(-1)).toEqual(
+      expect.objectContaining({
+        features: [
+          expect.objectContaining({
+            geometry: { type: 'Point', coordinates: [-75.67, 4.54] },
+          }),
+        ],
+      }),
+    );
   });
 });
